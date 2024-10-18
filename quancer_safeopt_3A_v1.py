@@ -151,10 +151,10 @@ subprocess.call(sys2dl, shell=True)
 subprocess.call(sys3dl, shell=True)  
 
 # Initial safepoint values.
-kp1_0 = 5
-kd1_0 = 0.7
+kp1_0 = 4
+kd1_0 = 0.3
 
-kp2_0 = 4
+kp2_0 = 8
 kd2_0 = 0.5
 
 kp3_0 = 6  
