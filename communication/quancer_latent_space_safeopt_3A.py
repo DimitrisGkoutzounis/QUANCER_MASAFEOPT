@@ -13,6 +13,7 @@ import os  # For directory operations
 import csv  # For writing and reading CSV files
 import safeopt
 import GPy
+from scipy.optimize import minimize
 from plot_iteration_3A import plot_iteration
 
 ################ PHASE 1 ################
@@ -279,7 +280,7 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
 
     return reward, os1, os2, os3
 
-N = 1  # Number of iterations
+N = 5  # Number of iterations
 
 # Initialize data files
 agent_data_dir = 'agent_data_3A'  
@@ -460,17 +461,16 @@ Y = np.zeros((N, 1))
 
 for i in range(N):
     # Get Kp and Kd values from each agent
-    KpKd1 = agent1.kp_values[i]  # Should be a numpy array or list of size 2
+    KpKd1 = agent1.kp_values[i]  
     KpKd2 = agent2.kp_values[i]
     KpKd3 = agent3.kp_values[i]
 
-    X[i, 0:2] = KpKd1  # Agent 1's Kp and Kd
-    X[i, 2:4] = KpKd2  # Agent 2's Kp and Kd
-    X[i, 4:6] = KpKd3  # Agent 3's Kp and Kd
+    X[i, 0:2] = KpKd1 
+    X[i, 2:4] = KpKd2  
+    X[i, 4:6] = KpKd3  
 
-    Y[i, 0] = agent1.rewards[i]  # All agents have the same reward
+    Y[i, 0] = agent1.rewards[i]  
 
-# Flatten Z to start optimization (initial guess)
 Z_init = np.random.uniform(-10.,10., (N,D)).flatten()
 
 # Define the compute_gradient function
@@ -563,8 +563,6 @@ def objective_function(Z_flat, X, D, N, Y):
 
     return total_loss
 
-# Perform minimization of the objective function
-from scipy.optimize import minimize
 
 result = minimize(
     objective_function,
@@ -582,12 +580,60 @@ Z_kd_opt = Z_opt[:, 3:]  # Kd1, Kd2, Kd3
 
 print("Optimization completed. Optimized Z matrix obtained.")
 
-#plot the kp and kd for agent 1
-plt.figure()
-plt.plot(Z_kp_opt[:, 0], label='Agent 1 Kp')
-plt.plot(Z_kd_opt[:, 0], label='Agent 1 Kd')
-plt.xlabel('Iterations')
-plt.ylabel('Kp, Kd')
-plt.legend()
-plt.title('Optimized Kp and Kd for Agent 1')
-plt.show()
+
+#  ========================== Initialize new agents in Z space for the next 50 iterations
+
+print("Initializing agents in Z space for the next 50 iterations...")
+
+# Build GP models to map Z to X using the data collected
+
+
+# For Kp
+gp_Z_to_X_kp = GPy.models.GPRegression(Z_kp_opt, X[:, :3], kernel=GPy.kern.RBF(input_dim=3))
+# For Kd
+gp_Z_to_X_kd = GPy.models.GPRegression(Z_kd_opt, X[:, 3:], kernel=GPy.kern.RBF(input_dim=3))
+
+
+
+for iteration in range(N+1, N+N+1):
+    # Get next Z values from agents
+    Z1_next = agent1.optimize()
+    Z2_next = agent2.optimize()
+    Z3_next = agent3.optimize()
+
+    print(f"Iteration {iteration}, Agent 1 Z: {Z1_next}, Agent 2 Z: {Z2_next}, Agent 3 Z: {Z3_next}")
+
+    # Map Z to X using the GP models
+    Kp1_next, _ = gp_Z_to_X_kp.predict(np.array([[Z1_next[0], Z2_next[0], Z3_next[0]]]))
+    Kd1_next, _ = gp_Z_to_X_kd.predict(np.array([[Z1_next[1], Z2_next[1], Z3_next[1]]]))
+
+    # Extract Kp and Kd for each agent
+    Kp1, Kp2, Kp3 = Kp1_next[0]
+    Kd1, Kd2, Kd3 = Kd1_next[0]
+
+    # Run the experiment with the mapped Kp and Kd values
+    y, os1, os2, os3 = run_experiment(Kp1, Kd1, Kp2, Kd2, Kp3, Kd3, iteration)
+
+    print(f"Reward: {y}")
+
+    # Update agents with observations
+    agent1.update(Z1_next, y)
+    agent2.update(Z2_next, y)
+    agent3.update(Z3_next, y)
+
+
+agent1.opt.plot(100)
+agent2.opt.plot(100)
+agent3.opt.plot(100)
+
+
+print("agent1:", agent1.opt.y)
+print("agent2:", agent2.opt.y)
+print("agent3:", agent3.opt.y)
+
+
+   
+
+print("========= SECOND PHASE COMPLETED =========")
+
+
