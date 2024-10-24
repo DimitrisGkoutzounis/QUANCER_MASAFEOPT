@@ -546,6 +546,14 @@ def objective_function(Z_flat, X, D, N, sigma2, f):
 
     return total_loss
 
+
+
+print(Z_init.shape)
+print(X.shape)
+
+
+wait = input("Press Enter to start optimization...")
+
 result = minimize(
     objective_function,
     Z_init,
