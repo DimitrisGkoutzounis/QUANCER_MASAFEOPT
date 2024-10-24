@@ -557,7 +557,7 @@ wait = input("Press Enter to start optimization...")
 result = minimize(
     objective_function,
     Z_init.flatten(),
-    args=(X, D, N, Y),
+    args=(X, D, N),
     method='L-BFGS-B',
     options={'ftol': 1e-1, 'gtol': 1e-1, 'maxiter': 10}
 )
