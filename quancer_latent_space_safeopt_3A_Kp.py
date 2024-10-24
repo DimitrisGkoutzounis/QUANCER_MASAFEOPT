@@ -467,9 +467,6 @@ print("Computing and minimizing the objective function...")
 N = len(agent1.kp_values)  # Number of data points (iterations + initial point)
 D = 3  # Total number of agents
 
-X = np.zeros((N, D))
-Y = np.zeros((N, 1))
-
 X1 = np.array(agent1.kp_values).flatten()
 X2 = np.array(agent2.kp_values).flatten()
 X3 = np.array(agent3.kp_values).flatten()
@@ -479,6 +476,8 @@ print("X1:",X1)
 X = np.column_stack((X1, X2, X3))
 print("X:",X.shape)
 print("X:",X)
+
+Y = np.array(agent1.rewards).flatten()
 
 Z_init = np.random.uniform(0, 10, (N, D))
 
