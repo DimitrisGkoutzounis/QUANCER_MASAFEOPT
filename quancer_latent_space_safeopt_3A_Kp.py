@@ -380,90 +380,86 @@ for iteration in range(1, N+1):
 
 print("========= BAYESIAN OPTIMIZATION COMPLETED =========")
 
-print("Plotting reward over iterations...")
+# print("Plotting reward over iterations...")
 
-# Load rewards from text file to find the best iteration
-rewards = []
-iterations_list = []
-with open(f'{agent_data_dir}/rewards.txt', 'r') as f:
-    next(f)  # Skip header
-    for line in f:
-        iteration_str, reward_str = line.strip().split(',')
-        iteration = int(iteration_str)
-        reward = float(reward_str)
-        iterations_list.append(iteration)
-        rewards.append(reward)
+# # Load rewards from text file to find the best iteration
+# rewards = []
+# iterations_list = []
+# with open(f'{agent_data_dir}/rewards.txt', 'r') as f:
+#     next(f)  # Skip header
+#     for line in f:
+#         iteration_str, reward_str = line.strip().split(',')
+#         iteration = int(iteration_str)
+#         reward = float(reward_str)
+#         iterations_list.append(iteration)
+#         rewards.append(reward)
 
-# Find the best experimental iteration
+# # Find the best experimental iteration
 
-max_reward = max(rewards)
-max_reward_index = rewards.index(max_reward)
-best_iteration = iterations_list[max_reward_index]
-print(f'Best Experimental Iteration: {best_iteration} | Reward - {max_reward}')
-print(f'Agent 1 Kp, Kd: {agent1.kp_values[best_iteration]}')
-print(f'Agent 2 Kp, Kd: {agent2.kp_values[best_iteration]}')
-print(f'Agent 3 Kp, Kd: {agent3.kp_values[best_iteration]}') 
+# max_reward = max(rewards)
+# max_reward_index = rewards.index(max_reward)
+# best_iteration = iterations_list[max_reward_index]
+# print(f'Best Experimental Iteration: {best_iteration} | Reward - {max_reward}')
+# print(f'Agent 1 Kp, Kd: {agent1.kp_values[best_iteration]}')
+# print(f'Agent 2 Kp, Kd: {agent2.kp_values[best_iteration]}')
+# print(f'Agent 3 Kp, Kd: {agent3.kp_values[best_iteration]}') 
 
-# Plot Kp values over iterations
-iterations = np.arange(0, N+1)
+# # Plot Kp values over iterations
+# iterations = np.arange(0, N+1)
 
-# Load rewards from text file
-agent1_iterations = []
-agent1_rewards = []
-agent2_iterations = []
-agent2_rewards = []
-agent3_iterations = []  
-agent3_rewards = []     
+# # Load rewards from text file
+# agent1_iterations = []
+# agent1_rewards = []
+# agent2_iterations = []
+# agent2_rewards = []
+# agent3_iterations = []  
+# agent3_rewards = []     
 
-with open(f'{agent_data_dir}/agent1_data.txt', 'r') as f1:
-    reader = csv.reader(f1)
-    next(reader)  # Skip header
-    for row in reader:
-        agent1_iterations.append(int(row[0]))
-        agent1_rewards.append(float(row[2]))
+# with open(f'{agent_data_dir}/agent1_data.txt', 'r') as f1:
+#     reader = csv.reader(f1)
+#     next(reader)  # Skip header
+#     for row in reader:
+#         agent1_iterations.append(int(row[0]))
+#         agent1_rewards.append(float(row[2]))
 
-with open(f'{agent_data_dir}/agent2_data.txt', 'r') as f2:
-    reader = csv.reader(f2)
-    next(reader)  # Skip header
-    for row in reader:
-        agent2_iterations.append(int(row[0]))
-        agent2_rewards.append(float(row[2]))
+# with open(f'{agent_data_dir}/agent2_data.txt', 'r') as f2:
+#     reader = csv.reader(f2)
+#     next(reader)  # Skip header
+#     for row in reader:
+#         agent2_iterations.append(int(row[0]))
+#         agent2_rewards.append(float(row[2]))
 
-with open(f'{agent_data_dir}/agent3_data.txt', 'r') as f3:  
-    reader = csv.reader(f3)
-    next(reader)  # Skip header
-    for row in reader:
-        agent3_iterations.append(int(row[0]))
-        agent3_rewards.append(float(row[2]))
+# with open(f'{agent_data_dir}/agent3_data.txt', 'r') as f3:  
+#     reader = csv.reader(f3)
+#     next(reader)  # Skip header
+#     for row in reader:
+#         agent3_iterations.append(int(row[0]))
+#         agent3_rewards.append(float(row[2]))
 
-plt.figure()
-plt.plot(agent1_iterations, agent1_rewards, label='Agent 1 Reward')
-plt.plot(agent2_iterations, agent2_rewards, label='Agent 2 Reward')
-plt.plot(agent3_iterations, agent3_rewards, label='Agent 3 Reward')  
-plt.ylabel('Reward') 
-plt.legend()
-plt.title('Reward over iterations')
-plt.grid(True)
-plt.savefig('plots_3A/reward_over_iterations.png')  
-plt.show()
+# plt.figure()
+# plt.plot(agent1_iterations, agent1_rewards, label='Agent 1 Reward')
+# plt.plot(agent2_iterations, agent2_rewards, label='Agent 2 Reward')
+# plt.plot(agent3_iterations, agent3_rewards, label='Agent 3 Reward')  
+# plt.ylabel('Reward') 
+# plt.legend()
+# plt.title('Reward over iterations')
+# plt.grid(True)
+# plt.savefig('plots_3A/reward_over_iterations.png')  
+# plt.show()
 
-# Call the function to plot the best iteration
-# plot_iteration(best_iteration)
+# # Call the function to plot the best iteration
+# # plot_iteration(best_iteration)
 
-agent1.opt.plot(100)
-agent2.opt.plot(100)
-agent3.opt.plot(100)
+# agent1.opt.plot(100)
+# agent2.opt.plot(100)
+# agent3.opt.plot(100)
 
-# =================================================
-# After Bayesian Optimization, compute objective function and minimize
-# =================================================
+# # =================================================
+# # After Bayesian Optimization, compute objective function and minimize
+# # =================================================
 
 
-wait = input("Press Enter to start the second phase...")
-
-print("Computing and minimizing the objective function...")
-
-# Collect data into X and Y
+# # Collect data into X and Y
 N = len(agent1.kp_values)  # Number of data points (iterations + initial point)
 D = 3  # Total number of agents
 
@@ -471,24 +467,19 @@ X1 = np.array(agent1.kp_values).flatten()
 X2 = np.array(agent2.kp_values).flatten()
 X3 = np.array(agent3.kp_values).flatten()
 
-print("X1:",X1)
+X = np.vstack((X1, X2,X3)).T
 
-X = np.column_stack((X1, X2, X3))
-print("X:",X.shape)
-print("X:",X)
+Z = np.random.uniform(-1.5, 1.5, (N, D))
 
-Y = np.array(agent1.rewards).flatten()
 
-Z_init = np.random.uniform(0, 10, (N, D))
+R = np.array(agent1.rewards).flatten()
 
-model_X = agent1.gp
-model_Z = GPy.models.GPRegression(Z_init.reshape(N, D), Y[:, None], GPy.kern.RBF(D))
+print("R:",R)
 
-#plot model_X
-model_X.plot()
-plt.show()
+model_X = GPy.models.GPRegression(X, R[:, None], GPy.kern.RBF(input_dim=D))
+# model_Z_init = GPy.models.GPRegression(Z, R_Z_init[:, None], GPy.kern.RBF(input_dim=D))
 
-wait = input("Press Enter ")
+
 
 # Define the compute_gradient function
 def compute_gradient(model, X):
@@ -496,14 +487,14 @@ def compute_gradient(model, X):
     return dmu_dX
 
 
-def objective_function(Z_flat, X, D, N):
+def column_wise(Z_flat, X, D, N, sigma2, f):
     Z = Z_flat.reshape(N, D)
 
     # Define model_Z with R_z as observations
-    model_Z = GPy.models.GPRegression(Z, Y.reshape(-1,1), GPy.kern.RBF(D))
+    model_Z = GPy.models.GPRegression(Z, R.reshape(-1,1), GPy.kern.RBF(D))
     model_all = GPy.models.GPRegression(Z, X,  GPy.kern.RBF(D))
     mu_all, _ = model_all.predict_noiseless(Z)
-    print("mu_all\n", mu_all)
+    # print("mu_all\n", mu_all)
 
     loss = 0.0
     grad_R_Z_norm_column = []
@@ -547,86 +538,74 @@ def objective_function(Z_flat, X, D, N):
     return total_loss
 
 
+# print(Z_init.shape)
+# print(X.shape)
 
-print(Z_init.shape)
-print(X.shape)
 
+# wait = input("Press Enter to start optimization...")
 
-wait = input("Press Enter to start optimization...")
-
-result = minimize(
-    objective_function,
-    Z_init.flatten(),
-    args=(X, D, N),
-    method='L-BFGS-B',
-    options={'ftol': 1e-1, 'gtol': 1e-1, 'maxiter': 10}
-)
-
+result = minimize(column_wise, Z.flatten(), args=(X, D, N, 1e-2, f), method='L-BFGS-B',options={'ftol':1e-2,'gtol':1e-2,'xtol':1e-2})
 Z_opt = result.x.reshape(N, D)
 
 
-Z_kp_opt = Z_opt[:, :3]  # Kp1, Kp2, Kp3
-Z_kd_opt = Z_opt[:, 3:]  # Kd1, Kd2, Kd3
-
-print("Optimization completed. Optimized Z matrix obtained.")
 
 
-wait = input("Press Enter to go to Dafni")
+wait = input("go to Dafni")
 
 
-#  ========================== Initialize new agents in Z space for the next 50 iterations
+# #  ========================== Initialize new agents in Z space for the next 50 iterations
 
 
-# Build GP models to map Z to X using the data collected
+# # Build GP models to map Z to X using the data collected
 
 
-# For Kp
-gp_Z_to_X_kp = GPy.models.GPRegression(Z_kp_opt, X[:, :3], kernel=GPy.kern.RBF(input_dim=3))
-# For Kd
-gp_Z_to_X_kd = GPy.models.GPRegression(Z_kd_opt, X[:, 3:], kernel=GPy.kern.RBF(input_dim=3))
+# # For Kp
+# gp_Z_to_X_kp = GPy.models.GPRegression(Z_kp_opt, X[:, :3], kernel=GPy.kern.RBF(input_dim=3))
+# # For Kd
+# gp_Z_to_X_kd = GPy.models.GPRegression(Z_kd_opt, X[:, 3:], kernel=GPy.kern.RBF(input_dim=3))
 
 
 
-for iteration in range(N+1, N+N+1):
-    # Get next Z values from agents
-    Z1_next = agent1.optimize()
-    Z2_next = agent2.optimize()
-    Z3_next = agent3.optimize()
+# for iteration in range(N+1, N+N+1):
+#     # Get next Z values from agents
+#     Z1_next = agent1.optimize()
+#     Z2_next = agent2.optimize()
+#     Z3_next = agent3.optimize()
 
-    print(f"Iteration {iteration}, Agent 1 Z: {Z1_next}, Agent 2 Z: {Z2_next}, Agent 3 Z: {Z3_next}")
+#     print(f"Iteration {iteration}, Agent 1 Z: {Z1_next}, Agent 2 Z: {Z2_next}, Agent 3 Z: {Z3_next}")
 
-    # Map Z to X using the GP models
-    Kp1_next, _ = gp_Z_to_X_kp.predict(np.array([[Z1_next[0], Z2_next[0], Z3_next[0]]]))
-    Kd1_next, _ = gp_Z_to_X_kd.predict(np.array([[Z1_next[1], Z2_next[1], Z3_next[1]]]))
+#     # Map Z to X using the GP models
+#     Kp1_next, _ = gp_Z_to_X_kp.predict(np.array([[Z1_next[0], Z2_next[0], Z3_next[0]]]))
+#     Kd1_next, _ = gp_Z_to_X_kd.predict(np.array([[Z1_next[1], Z2_next[1], Z3_next[1]]]))
 
-    # Extract Kp and Kd for each agent
-    Kp1, Kp2, Kp3 = Kp1_next[0]
-    Kd1, Kd2, Kd3 = Kd1_next[0]
+#     # Extract Kp and Kd for each agent
+#     Kp1, Kp2, Kp3 = Kp1_next[0]
+#     Kd1, Kd2, Kd3 = Kd1_next[0]
 
-    # Run the experiment with the mapped Kp and Kd values
-    y, os1, os2, os3 = run_experiment(Kp1, Kd1, Kp2, Kd2, Kp3, Kd3, iteration)
+#     # Run the experiment with the mapped Kp and Kd values
+#     y, os1, os2, os3 = run_experiment(Kp1, Kd1, Kp2, Kd2, Kp3, Kd3, iteration)
 
-    print(f"Reward: {y}")
+#     print(f"Reward: {y}")
 
-    # Update agents with observations
-    agent1.update(Z1_next, y)
-    agent2.update(Z2_next, y)
-    agent3.update(Z3_next, y)
-
-
-agent1.opt.plot(100)
-agent2.opt.plot(100)
-agent3.opt.plot(100)
+#     # Update agents with observations
+#     agent1.update(Z1_next, y)
+#     agent2.update(Z2_next, y)
+#     agent3.update(Z3_next, y)
 
 
-print("agent1:", agent1.opt.y)
-print("agent2:", agent2.opt.y)
-print("agent3:", agent3.opt.y)
+# agent1.opt.plot(100)
+# agent2.opt.plot(100)
+# agent3.opt.plot(100)
+
+
+# print("agent1:", agent1.opt.y)
+# print("agent2:", agent2.opt.y)
+# print("agent3:", agent3.opt.y)
 
 
 
    
 
-print("========= SECOND PHASE COMPLETED =========")
+# print("========= SECOND PHASE COMPLETED =========")
 
 
