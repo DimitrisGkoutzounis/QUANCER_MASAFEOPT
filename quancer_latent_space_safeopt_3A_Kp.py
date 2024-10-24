@@ -122,6 +122,95 @@ def plot_data(rt_t1, rt_theta1, os1, rt_t2, rt_theta2, os2, rt_t3, rt_theta3, os
     plt.title("Error over time")
     plt.legend()
     plt.show()
+    
+    
+
+# Define the compute_gradient function
+def compute_gradient(model, X):
+    dmu_dX, _ = model.predictive_gradients(X)
+    return dmu_dX
+
+
+def column_wise(Z_flat, X, D, N, sigma2, f):
+    Z = Z_flat.reshape(N, D)
+
+    # Define model_Z with R_z as observations
+    model_Z = GPy.models.GPRegression(Z, R.reshape(-1,1), GPy.kern.RBF(D))
+    model_all = GPy.models.GPRegression(Z, X,  GPy.kern.RBF(D))
+    mu_all, _ = model_all.predict_noiseless(Z)
+    # print("mu_all\n", mu_all)
+
+    loss = 0.0
+    grad_R_Z_norm_column = []
+    grad_R_X_norm_column = []
+
+    # Initialize matrices for U_z and U_x
+    U_z = np.zeros((N, D))
+    U_x = np.zeros((N, D))
+    
+    action_term = 0.0
+
+    for d in range(D):
+        X_d = np.zeros_like(X)
+        X_d[:, d] = X[:, d]
+        
+        model_d = GPy.models.GPRegression(Z, X_d,GPy.kern.RBF(D))
+        mu_d, _ = model_d.predict_noiseless(Z)
+        
+
+        diff1 = np.linalg.norm(X_d - mu_d)**2
+        diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
+        
+        action_term += 0.1 * diff1 + 0.2 * diff2
+
+        # Gradient-based alignment term
+        grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
+        grad_R_X = compute_gradient(model_X, X).reshape(N, D)
+
+        grad_R_Z_norm_column.append(np.linalg.norm(grad_R_Z[:, d]))
+        grad_R_X_norm_column.append(np.linalg.norm(grad_R_X[:, d]))
+
+        U_z[:, d] = grad_R_Z[:, d] / grad_R_Z_norm_column[d]
+        U_x[:, d] = grad_R_X[:, d] / grad_R_X_norm_column[d]
+
+    dot_product_matrix = np.dot(U_z.T, U_x)
+    diag_penalty = np.linalg.norm((1 - np.diag(dot_product_matrix))**2)/D
+    
+    total_loss = action_term + diag_penalty 
+
+
+    return total_loss
+
+
+# Define the Agent class for Bayesian Optimization
+class Agent:
+    def __init__(self, id, bounds, safe_point, initial_reward):
+        self.id = id
+        self.bounds = bounds
+        self.safe_point = safe_point
+
+        self.x0 = np.asarray([safe_point])
+        print(self.x0)
+        self.y0 = np.asarray([[initial_reward]]) 
+
+        self.kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        self.gp = GPy.models.GPRegression(self.x0, self.y0, self.kernel, noise_var=0.05**2)
+
+        self.parameter_set = safeopt.linearly_spaced_combinations(self.bounds, 100)
+        self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.03, beta=1.0, threshold=0.05)
+
+        self.kp_values = [safe_point]
+        self.rewards = [initial_reward]
+
+    def optimize(self):
+        x_next = self.opt.optimize()
+        return x_next
+
+    def update(self, x_next, y_meas):
+        self.opt.add_new_data_point(x_next, y_meas)
+        
+        self.kp_values.append(x_next)
+        self.rewards.append(y_meas)
 
 # Create directories to save data and plots
 if not os.path.exists('plots_3A'):
@@ -216,35 +305,6 @@ wait = input("Press Enter to start Bayesian Optimization...")
 
 # =================== Bayesian Optimization ===================
 
-# Define the Agent class for Bayesian Optimization
-class Agent:
-    def __init__(self, id, bounds, safe_point, initial_reward):
-        self.id = id
-        self.bounds = bounds
-        self.safe_point = safe_point
-
-        self.x0 = np.asarray([safe_point])
-        print(self.x0)
-        self.y0 = np.asarray([[initial_reward]]) 
-
-        self.kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
-        self.gp = GPy.models.GPRegression(self.x0, self.y0, self.kernel, noise_var=0.05**2)
-
-        self.parameter_set = safeopt.linearly_spaced_combinations(self.bounds, 100)
-        self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.03, beta=1.0, threshold=0.05)
-
-        self.kp_values = [safe_point]
-        self.rewards = [initial_reward]
-
-    def optimize(self):
-        x_next = self.opt.optimize()
-        return x_next
-
-    def update(self, x_next, y_meas):
-        self.opt.add_new_data_point(x_next, y_meas)
-        
-        self.kp_values.append(x_next)
-        self.rewards.append(y_meas)
 
 # Kp bounds
 K_bounds = [(0.01, 10)]
@@ -284,7 +344,7 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
 
     return reward, os1, os2, os3
 
-N = 2  # Number of iterations
+N = 5  # Number of iterations
 
 # Initialize data files
 agent_data_dir = 'agent_data_3A'  
@@ -380,80 +440,6 @@ for iteration in range(1, N+1):
 
 print("========= BAYESIAN OPTIMIZATION COMPLETED =========")
 
-# print("Plotting reward over iterations...")
-
-# # Load rewards from text file to find the best iteration
-# rewards = []
-# iterations_list = []
-# with open(f'{agent_data_dir}/rewards.txt', 'r') as f:
-#     next(f)  # Skip header
-#     for line in f:
-#         iteration_str, reward_str = line.strip().split(',')
-#         iteration = int(iteration_str)
-#         reward = float(reward_str)
-#         iterations_list.append(iteration)
-#         rewards.append(reward)
-
-# # Find the best experimental iteration
-
-# max_reward = max(rewards)
-# max_reward_index = rewards.index(max_reward)
-# best_iteration = iterations_list[max_reward_index]
-# print(f'Best Experimental Iteration: {best_iteration} | Reward - {max_reward}')
-# print(f'Agent 1 Kp, Kd: {agent1.kp_values[best_iteration]}')
-# print(f'Agent 2 Kp, Kd: {agent2.kp_values[best_iteration]}')
-# print(f'Agent 3 Kp, Kd: {agent3.kp_values[best_iteration]}') 
-
-# # Plot Kp values over iterations
-# iterations = np.arange(0, N+1)
-
-# # Load rewards from text file
-# agent1_iterations = []
-# agent1_rewards = []
-# agent2_iterations = []
-# agent2_rewards = []
-# agent3_iterations = []  
-# agent3_rewards = []     
-
-# with open(f'{agent_data_dir}/agent1_data.txt', 'r') as f1:
-#     reader = csv.reader(f1)
-#     next(reader)  # Skip header
-#     for row in reader:
-#         agent1_iterations.append(int(row[0]))
-#         agent1_rewards.append(float(row[2]))
-
-# with open(f'{agent_data_dir}/agent2_data.txt', 'r') as f2:
-#     reader = csv.reader(f2)
-#     next(reader)  # Skip header
-#     for row in reader:
-#         agent2_iterations.append(int(row[0]))
-#         agent2_rewards.append(float(row[2]))
-
-# with open(f'{agent_data_dir}/agent3_data.txt', 'r') as f3:  
-#     reader = csv.reader(f3)
-#     next(reader)  # Skip header
-#     for row in reader:
-#         agent3_iterations.append(int(row[0]))
-#         agent3_rewards.append(float(row[2]))
-
-# plt.figure()
-# plt.plot(agent1_iterations, agent1_rewards, label='Agent 1 Reward')
-# plt.plot(agent2_iterations, agent2_rewards, label='Agent 2 Reward')
-# plt.plot(agent3_iterations, agent3_rewards, label='Agent 3 Reward')  
-# plt.ylabel('Reward') 
-# plt.legend()
-# plt.title('Reward over iterations')
-# plt.grid(True)
-# plt.savefig('plots_3A/reward_over_iterations.png')  
-# plt.show()
-
-# # Call the function to plot the best iteration
-# # plot_iteration(best_iteration)
-
-# agent1.opt.plot(100)
-# agent2.opt.plot(100)
-# agent3.opt.plot(100)
-
 # # =================================================
 # # After Bayesian Optimization, compute objective function and minimize
 # # =================================================
@@ -469,7 +455,11 @@ X3 = np.array(agent3.kp_values).flatten()
 
 X = np.vstack((X1, X2,X3)).T
 
+print("X:",X)
+
 Z = np.random.uniform(-1.5, 1.5, (N, D))
+
+print("Z:",Z)
 
 
 R = np.array(agent1.rewards).flatten()
@@ -479,80 +469,16 @@ print("R:",R)
 model_X = GPy.models.GPRegression(X, R[:, None], GPy.kern.RBF(input_dim=D))
 
 
-
-# Define the compute_gradient function
-def compute_gradient(model, X):
-    dmu_dX, _ = model.predictive_gradients(X)
-    return dmu_dX
-
-
-def column_wise(Z_flat, X, D, N, sigma2, f):
-    Z = Z_flat.reshape(N, D)
-
-    # Define model_Z with R_z as observations
-    model_Z = GPy.models.GPRegression(Z, R.reshape(-1,1), GPy.kern.RBF(D))
-    model_all = GPy.models.GPRegression(Z, X,  GPy.kern.RBF(D))
-    mu_all, _ = model_all.predict_noiseless(Z)
-    # print("mu_all\n", mu_all)
-
-    loss = 0.0
-    grad_R_Z_norm_column = []
-    grad_R_X_norm_column = []
-
-    # Initialize matrices for U_z and U_x
-    U_z = np.zeros((N, D))
-    U_x = np.zeros((N, D))
-    
-    action_term = 0.0
-
-    for d in range(D):
-        X_d = np.zeros_like(X)
-        X_d[:, d] = X[:, d]
-        
-        model_d = GPy.models.GPRegression(Z, X_d,GPy.kern.RBF(D))
-        mu_d, _ = model_d.predict_noiseless(Z)
-        
-
-        diff1 = np.linalg.norm(X_d - mu_d)**2
-        diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
-        
-        action_term += 0.1 * diff1 + 0.2 * diff2
-
-        # Gradient-based alignment term
-        grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
-        grad_R_X = compute_gradient(model_X, X).reshape(N, D)
-
-        grad_R_Z_norm_column.append(np.linalg.norm(grad_R_Z[:, d]))
-        grad_R_X_norm_column.append(np.linalg.norm(grad_R_X[:, d]))
-
-        U_z[:, d] = grad_R_Z[:, d] / grad_R_Z_norm_column[d]
-        U_x[:, d] = grad_R_X[:, d] / grad_R_X_norm_column[d]
-
-    dot_product_matrix = np.dot(U_z.T, U_x)
-    diag_penalty = np.linalg.norm((1 - np.diag(dot_product_matrix))**2)/D
-    
-    total_loss = action_term + diag_penalty 
-
-
-    return total_loss
-
-
 # print(Z_init.shape)
-# print(X.shape)
-
-
-# wait = input("Press Enter to start optimization...")
-
+# pri
 result = minimize(column_wise, Z.flatten(), args=(X, D, N, 1e-2, f), method='L-BFGS-B',options={'ftol':1e-2,'gtol':1e-2})
 Z_opt = result.x.reshape(N, D)
 
 
+print("Z_opt:",Z_opt)   
 
 
 wait = input("go to Dafni")
-
-
-# #  ========================== Initialize new agents in Z space for the next 50 iterations
 
 
 # # Build GP models to map Z to X using the data collected
