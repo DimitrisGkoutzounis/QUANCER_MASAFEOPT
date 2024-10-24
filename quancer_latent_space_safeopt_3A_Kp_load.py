@@ -359,9 +359,9 @@ Y = np.array(Y).reshape(-1,1)
 # Kp bounds
 K_bounds = [(0.01, 10)]
 
-agent1 = Agent(1, K_bounds, x0_1, Y[0])
-agent2 = Agent(2, K_bounds, x0_2, Y[0])
-agent3 = Agent(3, K_bounds, x0_3, Y[0]) 
+agent1 = Agent(1, K_bounds, x0_1, Y[0][0])
+agent2 = Agent(2, K_bounds, x0_2, Y[0][0])
+agent3 = Agent(3, K_bounds, x0_3, Y[0][0]) 
 
 Kd1 = 0.7
 Kd2 = 0.7
