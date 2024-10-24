@@ -477,7 +477,6 @@ R = np.array(agent1.rewards).flatten()
 print("R:",R)
 
 model_X = GPy.models.GPRegression(X, R[:, None], GPy.kern.RBF(input_dim=D))
-# model_Z_init = GPy.models.GPRegression(Z, R_Z_init[:, None], GPy.kern.RBF(input_dim=D))
 
 
 
@@ -544,7 +543,7 @@ def column_wise(Z_flat, X, D, N, sigma2, f):
 
 # wait = input("Press Enter to start optimization...")
 
-result = minimize(column_wise, Z.flatten(), args=(X, D, N, 1e-2, f), method='L-BFGS-B',options={'ftol':1e-2,'gtol':1e-2,'xtol':1e-2})
+result = minimize(column_wise, Z.flatten(), args=(X, D, N, 1e-2, f), method='L-BFGS-B',options={'ftol':1e-2,'gtol':1e-2})
 Z_opt = result.x.reshape(N, D)
 
 
