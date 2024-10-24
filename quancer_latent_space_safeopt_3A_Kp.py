@@ -481,51 +481,54 @@ print("Z_opt:",Z_opt)
 wait = input("go to Dafni")
 
 
-# # Build GP models to map Z to X using the data collected
+# Build GP models to map Z to X using the data collected
 
 
-# # For Kp
-# gp_Z_to_X_kp = GPy.models.GPRegression(Z_kp_opt, X[:, :3], kernel=GPy.kern.RBF(input_dim=3))
-# # For Kd
-# gp_Z_to_X_kd = GPy.models.GPRegression(Z_kd_opt, X[:, 3:], kernel=GPy.kern.RBF(input_dim=3))
+# For Kp
+Z_to_X_0 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X[:, 0].reshape(-1,1), kernel=GPy.kern.RBF(1))
+Z_to_X_1 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), X[:, 1].reshape(-1,1), kernel=GPy.kern.RBF(1))
+Z_to_X_2 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X[:, 2].reshape(-1,1), kernel=GPy.kern.RBF(1))
+
+actions_1 = np.array([])
+actions_2 = np.array([])
+actions_3 = np.array([])
+
+for iteration in range(0, 5):
+    # Get next Z values from agents
+    Z1_next = agent1.optimize()
+    Z2_next = agent2.optimize()
+    Z3_next = agent3.optimize()
+    # Z --> X mapping
+    Kp1_next, _ = Z_to_X_0.predict(Z1_next[0].reshape(-1,1))
+    Kp2_next, _ = Z_to_X_1.predict(Z2_next[0].reshape(-1,1))
+    Kp3_next, _ = Z_to_X_2.predict(Z3_next[0].reshape(-1,1))
+    
+    Kp1_next = np.asarray([Kp1_next]).flatten()
+    Kp2_next = np.asarray([Kp2_next]).flatten()
+    Kp3_next = np.asarray([Kp3_next]).flatten()
+    
+    actions_1 = np.append(actions_1, Kp1_next)
+    actions_2 = np.append(actions_2, Kp2_next)
+    actions_3 = np.append(actions_3, Kp3_next)
+    
+    wait = input("Next...")
+
+    # Run the experiment with the mapped Kp and Kd values
+    y, os1, os2, os3 = run_experiment(Kp1_next[0], Kd1, Kp2_next[0], Kd2, Kp3_next[0], Kd3, iteration)
+
+    print(f"Reward: {y}")
+
+    # Update agents with observations
+    agent1.update(Z1_next, y)
+    agent2.update(Z2_next, y)
+    agent3.update(Z3_next, y)
 
 
-
-# for iteration in range(N+1, N+N+1):
-#     # Get next Z values from agents
-#     Z1_next = agent1.optimize()
-#     Z2_next = agent2.optimize()
-#     Z3_next = agent3.optimize()
-
-#     print(f"Iteration {iteration}, Agent 1 Z: {Z1_next}, Agent 2 Z: {Z2_next}, Agent 3 Z: {Z3_next}")
-
-#     # Map Z to X using the GP models
-#     Kp1_next, _ = gp_Z_to_X_kp.predict(np.array([[Z1_next[0], Z2_next[0], Z3_next[0]]]))
-#     Kd1_next, _ = gp_Z_to_X_kd.predict(np.array([[Z1_next[1], Z2_next[1], Z3_next[1]]]))
-
-#     # Extract Kp and Kd for each agent
-#     Kp1, Kp2, Kp3 = Kp1_next[0]
-#     Kd1, Kd2, Kd3 = Kd1_next[0]
-
-#     # Run the experiment with the mapped Kp and Kd values
-#     y, os1, os2, os3 = run_experiment(Kp1, Kd1, Kp2, Kd2, Kp3, Kd3, iteration)
-
-#     print(f"Reward: {y}")
-
-#     # Update agents with observations
-#     agent1.update(Z1_next, y)
-#     agent2.update(Z2_next, y)
-#     agent3.update(Z3_next, y)
+agent1.opt.plot(100)
+agent2.opt.plot(100)
+agent3.opt.plot(100)
 
 
-# agent1.opt.plot(100)
-# agent2.opt.plot(100)
-# agent3.opt.plot(100)
-
-
-# print("agent1:", agent1.opt.y)
-# print("agent2:", agent2.opt.y)
-# print("agent3:", agent3.opt.y)
 
 
 
