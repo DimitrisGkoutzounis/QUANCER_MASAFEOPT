@@ -131,7 +131,7 @@ def compute_gradient(model, X):
     return dmu_dX
 
 
-def column_wise(Z_flat, X, D, N, sigma2, f):
+def column_wise(Z_flat, X, D, N):
     Z = Z_flat.reshape(N, D)
 
     # Define model_Z with R_z as observations
@@ -161,7 +161,7 @@ def column_wise(Z_flat, X, D, N, sigma2, f):
         diff1 = np.linalg.norm(X_d - mu_d)**2
         diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
-        action_term += 0.1 * diff1 + 0.2 * diff2
+        action_term += 1 * diff1 + 0 * diff2
 
         # Gradient-based alignment term
         grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
@@ -176,7 +176,7 @@ def column_wise(Z_flat, X, D, N, sigma2, f):
     dot_product_matrix = np.dot(U_z.T, U_x)
     diag_penalty = np.linalg.norm((1 - np.diag(dot_product_matrix))**2)/D
     
-    total_loss = action_term + diag_penalty 
+    total_loss = action_term +  diag_penalty 
 
 
     return total_loss
@@ -325,6 +325,10 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
     gain_arg2 = f' -Kp {kp2} -Kd {kd2}'
     gain_arg3 = f' -Kp {kp3} -Kd {kd3}'
 
+    print(gain_arg1)    
+    print(gain_arg2)
+    print(gain_arg3)
+
     sent_command(target_uri_1, modelName, gain_arg1, std_args)
     sent_command(target_uri_2, modelName, gain_arg2, std_args)
     sent_command(target_uri_3, modelName, gain_arg3, std_args) 
@@ -344,7 +348,7 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
 
     return reward, os1, os2, os3
 
-N = 5  # Number of iterations
+N = 10  # Number of iterations
 
 # Initialize data files
 agent_data_dir = 'agent_data_3A'  
@@ -457,7 +461,7 @@ X = np.vstack((X1, X2,X3)).T
 
 print("X:",X)
 
-Z = np.random.uniform(-1.5, 1.5, (N, D))
+Z = np.random.uniform(0, 8, (N, D))
 
 print("Z:",Z)
 
@@ -471,7 +475,7 @@ model_X = GPy.models.GPRegression(X, R[:, None], GPy.kern.RBF(input_dim=D))
 
 # print(Z_init.shape)
 # pri
-result = minimize(column_wise, Z.flatten(), args=(X, D, N, 1e-2, f), method='L-BFGS-B',options={'ftol':1e-2,'gtol':1e-2})
+result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-3,'gtol':1e-3})
 Z_opt = result.x.reshape(N, D)
 
 
@@ -493,11 +497,16 @@ actions_1 = np.array([])
 actions_2 = np.array([])
 actions_3 = np.array([])
 
-for iteration in range(0, 5):
+for iteration in range(0, 10):
     # Get next Z values from agents
     Z1_next = agent1.optimize()
     Z2_next = agent2.optimize()
     Z3_next = agent3.optimize()
+
+
+    print(Z1_next)
+    print(Z2_next)
+    print(Z2_next)
     # Z --> X mapping
     Kp1_next, _ = Z_to_X_0.predict(Z1_next[0].reshape(-1,1))
     Kp2_next, _ = Z_to_X_1.predict(Z2_next[0].reshape(-1,1))
@@ -511,8 +520,6 @@ for iteration in range(0, 5):
     actions_2 = np.append(actions_2, Kp2_next)
     actions_3 = np.append(actions_3, Kp3_next)
     
-    wait = input("Next...")
-
     # Run the experiment with the mapped Kp and Kd values
     y, os1, os2, os3 = run_experiment(Kp1_next[0], Kd1, Kp2_next[0], Kd2, Kp3_next[0], Kd3, iteration)
 
