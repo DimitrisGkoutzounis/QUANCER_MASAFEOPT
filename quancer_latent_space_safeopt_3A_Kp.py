@@ -470,112 +470,90 @@ D = 3  # Total number of agents
 X = np.zeros((N, D))
 Y = np.zeros((N, 1))
 
+# fill X matrix and Y matrix
 for i in range(N):
     # Get Kp and Kd values from each agent
     Kp1 = agent1.kp_values[i]  
     Kp2 = agent2.kp_values[i]
     Kp3 = agent3.kp_values[i]
-
-    X[i, 0:2] = KpKd1 
-    X[i, 2:4] = KpKd2  
-    X[i, 4:6] = KpKd3  
+    
+    X[i, 0] = Kp1
+    X[i, 1] = Kp2
+    X[i, 2] = Kp3
 
     Y[i, 0] = agent1.rewards[i]  
 
 print("X:",X.shape)
 print("Y:",Y.shape)
-Z_init = np.random.uniform(-10.,10., (N,D)).flatten()
+
+
+Z_init = np.random.uniform(-10.0,10.0, (N,D)).flatten()
+print("Z_init:",Z_init.shape)
+
+model_X = agent1.gp
+model_Z = GPy.models.GPRegression(Z_init.reshape(N, D), Y[:, None], GPy.kern.RBF(D))
+
+#plot model_X
+model_X.plot()
+plt.show()
+
+wait = input("Press Enter ")
 
 # Define the compute_gradient function
 def compute_gradient(model, X):
     dmu_dX, _ = model.predictive_gradients(X)
     return dmu_dX
 
-# Define the objective function to minimize
-def objective_function(Z_flat, X, D, N, Y):
+
+def objective_function(Z_flat, X, D, N, sigma2, f):
     Z = Z_flat.reshape(N, D)
 
-    # Split Z into Z_kp and Z_kd
-    Z_kp = Z[:, :3]  # Shape: (N, 3)
-    Z_kd = Z[:, 3:]  # Shape: (N, 3)
+    # Define model_Z with R_z as observations
+    model_Z = GPy.models.GPRegression(Z, Y.reshape(-1,1), GPy.kern.RBF(D))
+    model_all = GPy.models.GPRegression(Z, X,  GPy.kern.RBF(D))
+    mu_all, _ = model_all.predict_noiseless(Z)
+    print("mu_all\n", mu_all)
 
-    kernel_rbf = GPy.kern.RBF(input_dim=3)
+    loss = 0.0
+    grad_R_Z_norm_column = []
+    grad_R_X_norm_column = []
 
-    # Create GP models for Z_kp and Z_kd
-    model_Z_kp = GPy.models.GPRegression(Z_kp, Y, kernel_rbf.copy())
-    model_Z_kd = GPy.models.GPRegression(Z_kd, Y, kernel_rbf.copy())
+    # Initialize matrices for U_z and U_x
+    U_z = np.zeros((N, D))
+    U_x = np.zeros((N, D))
+    
+    action_term = 0.0
 
-    # U matrix model Kp and Kd (X)
-    model_X_kp = GPy.models.GPRegression(X[:, :3], Y, kernel_rbf.copy())
-    model_X_kd = GPy.models.GPRegression(X[:, 3:], Y, kernel_rbf.copy())
+    for d in range(D):
+        X_d = np.zeros_like(X)
+        X_d[:, d] = X[:, d]
+        
+        model_d = GPy.models.GPRegression(Z, X_d,GPy.kern.RBF(D))
+        mu_d, _ = model_d.predict_noiseless(Z)
+        
 
-    # Compute gradients
-    grad_R_Z_kp = compute_gradient(model_Z_kp, Z_kp).reshape(N, 3)
-    grad_R_Z_kd = compute_gradient(model_Z_kd, Z_kd).reshape(N, 3)
+        diff1 = np.linalg.norm(X_d - mu_d)**2
+        diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
+        
+        action_term += 0.1 * diff1 + 0.2 * diff2
 
-    grad_R_X_kp = compute_gradient(model_X_kp, X[:, :3]).reshape(N, 3)
-    grad_R_X_kd = compute_gradient(model_X_kd, X[:, 3:]).reshape(N, 3)
+        # Gradient-based alignment term
+        grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
+        grad_R_X = compute_gradient(model_X, X).reshape(N, D)
 
-    # Initialize unit vector matrices
-    U_z_kp = np.zeros((N, 3))
-    U_x_kp = np.zeros((N, 3))
+        grad_R_Z_norm_column.append(np.linalg.norm(grad_R_Z[:, d]))
+        grad_R_X_norm_column.append(np.linalg.norm(grad_R_X[:, d]))
 
-    U_z_kd = np.zeros((N, 3))
-    U_x_kd = np.zeros((N, 3))
+        U_z[:, d] = grad_R_Z[:, d] / grad_R_Z_norm_column[d]
+        U_x[:, d] = grad_R_X[:, d] / grad_R_X_norm_column[d]
 
-    # Compute action terms
-    action_term_kp = 0.0
-    action_term_kd = 0.0
+    dot_product_matrix = np.dot(U_z.T, U_x)
+    diag_penalty = np.linalg.norm((1 - np.diag(dot_product_matrix))**2)/D
+    
+    total_loss = action_term + diag_penalty 
 
-    # For Kp
-    model_all_kp = GPy.models.GPRegression(Z_kp, X[:, :3], kernel_rbf.copy())
-    mu_all_kp, _ = model_all_kp.predict_noiseless(Z_kp)
-
-    # For Kd
-    model_all_kd = GPy.models.GPRegression(Z_kd, X[:, 3:], kernel_rbf.copy())
-    mu_all_kd, _ = model_all_kd.predict_noiseless(Z_kd)
-
-    for d in range(3):
-        X_d_kp = np.zeros_like(X[:, :3])
-        X_d_kp[:, d] = X[:, d]
-
-        X_d_kd = np.zeros_like(X[:, 3:])
-        X_d_kd[:, d] = X[:, 3 + d]
-
-        model_d_kp = GPy.models.GPRegression(Z_kp, X_d_kp, kernel_rbf.copy())
-        mu_d_kp, _ = model_d_kp.predict_noiseless(Z_kp)
-
-        model_d_kd = GPy.models.GPRegression(Z_kd, X_d_kd, kernel_rbf.copy())
-        mu_d_kd, _ = model_d_kd.predict_noiseless(Z_kd)
-
-        cost1_kp = np.linalg.norm(X_d_kp - mu_d_kp) ** 2
-        cost2_kp = np.linalg.norm(mu_d_kp - mu_all_kp[:, [d]]) ** 2
-
-        cost1_kd = np.linalg.norm(X_d_kd - mu_d_kd) ** 2
-        cost2_kd = np.linalg.norm(mu_d_kd - mu_all_kd[:, [d]]) ** 2
-
-        action_term_kp += 0.8 * cost1_kp + 0.8 * cost2_kp
-        action_term_kd += 0.8 * cost1_kd + 0.8 * cost2_kd
-
-        # Create unit vector matrices
-        U_z_kp[:, d] = grad_R_Z_kp[:, d] / (np.linalg.norm(grad_R_Z_kp[:, d]) + 1e-8)
-        U_x_kp[:, d] = grad_R_X_kp[:, d] / (np.linalg.norm(grad_R_X_kp[:, d]) + 1e-8)
-
-        U_z_kd[:, d] = grad_R_Z_kd[:, d] / (np.linalg.norm(grad_R_Z_kd[:, d]) + 1e-8)
-        U_x_kd[:, d] = grad_R_X_kd[:, d] / (np.linalg.norm(grad_R_X_kd[:, d]) + 1e-8)
-
-    dot_product_kp = np.sum(U_z_kp * U_x_kp, axis=0)  # Dot products per dimension
-    cost3_kp = np.linalg.norm((1 - dot_product_kp) ** 2) / 3
-
-    dot_product_kd = np.sum(U_z_kd * U_x_kd, axis=0)
-    cost3_kd = np.linalg.norm((1 - dot_product_kd) ** 2) / 3
-
-    cost3 = cost3_kp + cost3_kd
-
-    total_loss = action_term_kp + action_term_kd + 0.8 * cost3
 
     return total_loss
-
 
 result = minimize(
     objective_function,
