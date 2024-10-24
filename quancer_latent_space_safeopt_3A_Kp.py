@@ -160,9 +160,9 @@ kd2_0 = 0.5
 kp3_0 = 6  
 kd3_0 = 0.8
 
-x0_1 = (kp1_0)
-x0_2 = (kp2_0)
-x0_3 = (kp3_0) 
+x0_1 = [(kp1_0)]
+x0_2 = [(kp2_0)]
+x0_3 = [(kp3_0)] 
 
 # Delay difference between the agents
 td1 = 0.09
@@ -224,6 +224,7 @@ class Agent:
         self.safe_point = safe_point
 
         self.x0 = np.asarray([safe_point])
+        print(self.x0)
         self.y0 = np.asarray([[initial_reward]]) 
 
         self.kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
@@ -299,9 +300,9 @@ with open(f'{agent_data_dir}/agent1_data.txt', 'w', newline='') as f1, \
     writer1.writerow(['Iteration', 'Kp', 'Kd', 'Reward'])
     writer2.writerow(['Iteration', 'Kp', 'Kd', 'Reward'])
     writer3.writerow(['Iteration', 'Kp', 'Kd', 'Reward'])  
-    writer1.writerow([0, x0_1[0], x0_1[1], reward_0])
-    writer2.writerow([0, x0_2[0], x0_2[1], reward_0])
-    writer3.writerow([0, x0_3[0], x0_3[1], reward_0]) 
+    writer1.writerow([0, x0_1[0], reward_0])
+    writer2.writerow([0, x0_2[0], reward_0])
+    writer3.writerow([0, x0_3[0], reward_0]) 
 
 with open(f'{agent_data_dir}/rewards.txt', 'w') as f:
     f.write('Iteration,Reward\n')
@@ -315,10 +316,10 @@ for iteration in range(1, N+1):
     K2_next = agent2.optimize()
     K3_next = agent3.optimize() 
 
-    print(f"Iteration {iteration}, Agent 1:  -Kp {K1_next} -Kd {Kd1}, Agent 2: -Kp {K2_next} -Kd {Kd2}, Agent 3: -Kp {K3_next} -Kd {Kd3}")
+    print(f"Iteration {iteration}, Agent 1:  -Kp {K1_next[0]} -Kd {Kd1}, Agent 2: -Kp {K2_next[0]} -Kd {Kd2}, Agent 3: -Kp {K3_next[0]} -Kd {Kd3}")
 
     # Run the experiment with kp1_next, kp2_next, kp3_next
-    y, os1, os2, os3 = run_experiment(K1_next, Kd1, K2_next, Kd2, K3_next, Kd3, iteration)
+    y, os1, os2, os3 = run_experiment(K1_next[0], Kd1, K2_next[0], Kd2, K3_next[0], Kd3, iteration)
 
     print(f"Reward: {y}")
     
@@ -334,9 +335,9 @@ for iteration in range(1, N+1):
         writer1 = csv.writer(f1)
         writer2 = csv.writer(f2)
         writer3 = csv.writer(f3) 
-        writer1.writerow([iteration, K1_next[0], K1_next[1], y])
-        writer2.writerow([iteration, K2_next[0], K2_next[1], y])
-        writer3.writerow([iteration, K3_next[0], K3_next[1], y])  
+        writer1.writerow([iteration, K1_next[0], y])
+        writer2.writerow([iteration, K2_next[0], y])
+        writer3.writerow([iteration, K3_next[0], y])  
 
     # Save rewards to a text file
     with open(f'{agent_data_dir}/rewards.txt', 'a') as f:
@@ -351,26 +352,26 @@ for iteration in range(1, N+1):
 
     # Agent 1 plot
     agent1.opt.plot(100, axes[0])
-    axes[0].scatter(x_max_1[0], x_max_1[1], marker="*", color='red', s=100, label='Current Maximum')
+    axes[0].scatter(x_max_1[0],y_max_1, marker="*", color='red', s=100, label='Current Maximum')
     axes[0].set_title(f'Agent 1 - Iteration {iteration}')
     axes[0].set_xlabel('Kp')
-    axes[0].set_ylabel('Kd')
+    axes[0].set_ylabel('Reward')
     axes[0].legend()
 
     # Agent 2 plot
     agent2.opt.plot(100, axes[1])
-    axes[1].scatter(x_max_2[0], x_max_2[1], marker="*", color='red', s=100, label='Current Maximum')
+    axes[1].scatter(x_max_2[0],y_max_2, marker="*", color='red', s=100, label='Current Maximum')
     axes[1].set_title(f'Agent 2 - Iteration {iteration}')
     axes[1].set_xlabel('Kp')
-    axes[1].set_ylabel('Kd')
+    axes[1].set_ylabel('Reward')
     axes[1].legend()
 
     # Agent 3 plot
     agent3.opt.plot(100, axes[2])
-    axes[2].scatter(x_max_3[0], x_max_3[1], marker="*", color='red', s=100, label='Current Maximum')
+    axes[2].scatter(x_max_3[0],y_max_3, marker="*", color='red', s=100, label='Current Maximum')
     axes[2].set_title(f'Agent 3 - Iteration {iteration}')
     axes[2].set_xlabel('Kp')
-    axes[2].set_ylabel('Kd')
+    axes[2].set_ylabel('Reward')
     axes[2].legend()
 
     plt.tight_layout()
@@ -419,21 +420,21 @@ with open(f'{agent_data_dir}/agent1_data.txt', 'r') as f1:
     next(reader)  # Skip header
     for row in reader:
         agent1_iterations.append(int(row[0]))
-        agent1_rewards.append(float(row[3]))
+        agent1_rewards.append(float(row[2]))
 
 with open(f'{agent_data_dir}/agent2_data.txt', 'r') as f2:
     reader = csv.reader(f2)
     next(reader)  # Skip header
     for row in reader:
         agent2_iterations.append(int(row[0]))
-        agent2_rewards.append(float(row[3]))
+        agent2_rewards.append(float(row[2]))
 
 with open(f'{agent_data_dir}/agent3_data.txt', 'r') as f3:  
     reader = csv.reader(f3)
     next(reader)  # Skip header
     for row in reader:
         agent3_iterations.append(int(row[0]))
-        agent3_rewards.append(float(row[3]))
+        agent3_rewards.append(float(row[2]))
 
 plt.figure()
 plt.plot(agent1_iterations, agent1_rewards, label='Agent 1 Reward')
@@ -447,7 +448,11 @@ plt.savefig('plots_3A/reward_over_iterations.png')
 plt.show()
 
 # Call the function to plot the best iteration
-plot_iteration(best_iteration)
+# plot_iteration(best_iteration)
+
+agent1.opt.plot(100)
+agent2.opt.plot(100)
+agent3.opt.plot(100)
 
 # =================================================
 # After Bayesian Optimization, compute objective function and minimize
@@ -467,9 +472,9 @@ Y = np.zeros((N, 1))
 
 for i in range(N):
     # Get Kp and Kd values from each agent
-    KpKd1 = agent1.kp_values[i]  
-    KpKd2 = agent2.kp_values[i]
-    KpKd3 = agent3.kp_values[i]
+    Kp1 = agent1.kp_values[i]  
+    Kp2 = agent2.kp_values[i]
+    Kp3 = agent3.kp_values[i]
 
     X[i, 0:2] = KpKd1 
     X[i, 2:4] = KpKd2  
@@ -477,6 +482,8 @@ for i in range(N):
 
     Y[i, 0] = agent1.rewards[i]  
 
+print("X:",X.shape)
+print("Y:",Y.shape)
 Z_init = np.random.uniform(-10.,10., (N,D)).flatten()
 
 # Define the compute_gradient function
