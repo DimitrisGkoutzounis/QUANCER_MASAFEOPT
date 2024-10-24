@@ -349,9 +349,9 @@ X3 = [6, 6.165454545454545, 5.56, 5.257272727272727, 4.8536363636363635, 4.44999
 
 Y = [0.26771307798947697, 0.22289966836140557, 0.2584023809211046, 0.27314729879275146, 0.279485034370205, 0.25227246991739516, 0.20899785646797334, 0.23513342181103883, 0.22974772668062596, 0.2135091358808158, 0.19698300906731814]
 
-X1 = np.array(X1).reshape(-1,1)
-X2 = np.array(X2).reshape(-1,1)
-X3 = np.array(X3).reshape(-1,1)
+X1 = np.array(X1)
+X2 = np.array(X2)
+X3 = np.array(X3)
 
 Y = np.array(Y).reshape(-1,1)   
 
@@ -367,12 +367,6 @@ Kd1 = 0.7
 Kd2 = 0.7
 Kd3 = 0.7 
 
-
-
-X1 = np.array(agent1.kp_values).flatten()
-X2 = np.array(agent2.kp_values).flatten()
-X3 = np.array(agent3.kp_values).flatten()
-
 X = np.vstack((X1, X2,X3)).T
 
 print("X:",X)
@@ -382,10 +376,13 @@ Z = np.random.uniform(-1.5, 1.5, (N, D))
 print("Z:",Z)
 
 
-R = Y
+R = Y.flatten()
 
 print("R:",R)
 
+
+print(X.shape)
+print(Y.shape)
 model_X = GPy.models.GPRegression(X, R[:, None], GPy.kern.RBF(input_dim=D))
 
 
