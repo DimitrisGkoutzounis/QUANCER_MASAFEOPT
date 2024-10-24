@@ -343,48 +343,58 @@ D = 3  # Total number of agents
 # # After Bayesian Optimization, compute objective function and minimize
 # # =================================================
 
+# Existing data arrays with 11 elements each
 X1 = [4, 3.8445454545454543, 4.449999999999999, 4.752727272727272, 5.156363636363636, 5.56, 3.5418181818181815, 5.862727272727272, 6.165454545454545, 6.468181818181818, 6.7709090909090905]
 X2 = [8, 7.779999999999999, 8.486363636363636, 8.789090909090909, 9.192727272727272, 9.596363636363636, 7.477272727272727, 9.899090909090908, 7.174545454545454, 6.7709090909090905, 6.468181818181818]
 X3 = [6, 6.165454545454545, 5.56, 5.257272727272727, 4.8536363636363635, 4.449999999999999, 6.468181818181818, 4.1472727272727266, 3.8445454545454543, 3.5418181818181815, 3.239090909090909]
 
 Y = [0.26771307798947697, 0.22289966836140557, 0.2584023809211046, 0.27314729879275146, 0.279485034370205, 0.25227246991739516, 0.20899785646797334, 0.23513342181103883, 0.22974772668062596, 0.2135091358808158, 0.19698300906731814]
 
+# Convert to numpy arrays
 X1 = np.array(X1)
 X2 = np.array(X2)
 X3 = np.array(X3)
+Y = np.array(Y).reshape(-1,1)
 
-Y = np.array(Y).reshape(-1,1)   
+# Combine X1, X2, X3 into a single array
+X = np.vstack((X1, X2, X3)).T  # Shape: (11, 3)
+
+# Corrected: Set N based on the actual data length
+N, D = X.shape  # N = 11, D = 3
+
+print("X shape:", X.shape)
+print("Y shape:", Y.shape)
+
+# Initialize Z with the correct dimensions
+Z = np.random.uniform(-1.5, 1.5, (N, D))
+print("Z", Z)
 
 
-# Kp bounds
-K_bounds = [(0.01, 10)]
 
-agent1 = Agent(1, K_bounds, x0_1, Y[0][0])
-agent2 = Agent(2, K_bounds, x0_2, Y[0][0])
-agent3 = Agent(3, K_bounds, x0_3, Y[0][0]) 
+print(X1.shape)
+
 
 Kd1 = 0.7
 Kd2 = 0.7
-Kd3 = 0.7 
-
-X = np.vstack((X1, X2,X3)).T
-
-print("X:",X)
-
-Z = np.random.uniform(-1.5, 1.5, (N, D))
-
-print("Z:",Z)
+Kd3 = 0.7
 
 
-R = Y.flatten()
+X1_0 = np.array(X1[0]).flatten()
+X2_0 = np.array(X2[0]).flatten()
+X3_0 = np.array(X3[0]).flatten()
 
-print("R:",R)
+Y_0 = Y[0][0]
 
+print("X1_0:",Y_0)
+agent1 = Agent(1, [(0, 10)], X1_0, Y_0)
+agent2 = Agent(2, [(0, 10)], X2_0, Y_0)
+agent3 = Agent(3, [(0, 10)], X3_0, Y_0)
 
-print(X.shape)
-print(Y.shape)
-model_X = GPy.models.GPRegression(X, R[:, None], GPy.kern.RBF(input_dim=D))
+R = Y 
 
+print(R.ndim)
+
+model_X = GPy.models.GPRegression(X, R, GPy.kern.RBF(input_dim=D))
 
 # print(Z_init.shape)
 # pri
