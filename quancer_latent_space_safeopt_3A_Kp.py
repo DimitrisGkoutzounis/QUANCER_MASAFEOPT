@@ -470,23 +470,11 @@ D = 3  # Total number of agents
 X = np.zeros((N, D))
 Y = np.zeros((N, 1))
 
-# fill X matrix and Y matrix
-for i in range(N):
-    # Get Kp and Kd values from each agent
-    Kp1 = agent1.kp_values[i]  
-    Kp2 = agent2.kp_values[i]
-    Kp3 = agent3.kp_values[i]
-    
-    # convert to numpy array
-    kp1 = np.array([Kp1])
-    kp2 = np.array([Kp2])
-    kp3 = np.array([Kp3])
-    
-    X[i, 0] = Kp1
-    X[i, 1] = Kp2
-    X[i, 2] = Kp3
+X = np.vstack((agent1.kp_values, agent2.kp_values, agent3.kp_values)).T
+Y = agent1.rewards
 
-    Y[i, 0] = agent1.rewards[i]  
+print("X:",X)
+print("Y:",Y)
 
 print("X:",X.shape)
 print("Y:",Y.shape)
