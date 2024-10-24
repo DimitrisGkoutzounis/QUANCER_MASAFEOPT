@@ -496,7 +496,7 @@ def compute_gradient(model, X):
     return dmu_dX
 
 
-def objective_function(Z_flat, X, D, N, sigma2, f):
+def objective_function(Z_flat, X, D, N):
     Z = Z_flat.reshape(N, D)
 
     # Define model_Z with R_z as observations
@@ -571,9 +571,11 @@ Z_kd_opt = Z_opt[:, 3:]  # Kd1, Kd2, Kd3
 print("Optimization completed. Optimized Z matrix obtained.")
 
 
+wait = input("Press Enter to go to Dafni")
+
+
 #  ========================== Initialize new agents in Z space for the next 50 iterations
 
-print("Initializing agents in Z space for the next 50 iterations...")
 
 # Build GP models to map Z to X using the data collected
 
