@@ -284,7 +284,7 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
 
     return reward, os1, os2, os3
 
-N = 5  # Number of iterations
+N = 2  # Number of iterations
 
 # Initialize data files
 agent_data_dir = 'agent_data_3A'  
@@ -470,8 +470,11 @@ D = 3  # Total number of agents
 X = np.zeros((N, D))
 Y = np.zeros((N, 1))
 
-X = np.vstack((agent1.kp_values, agent2.kp_values, agent3.kp_values)).T
-Y = agent1.rewards
+X1 = np.array(agent1.kp_values)
+X2 = np.array(agent2.kp_values)
+X3 = np.array(agent3.kp_values)
+
+print("X1:",X1)
 
 print("X:",X)
 print("Y:",Y)
