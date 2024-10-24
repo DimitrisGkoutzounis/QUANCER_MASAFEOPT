@@ -382,7 +382,7 @@ Z = np.random.uniform(-1.5, 1.5, (N, D))
 print("Z:",Z)
 
 
-R = Y.flatten()
+R = Y
 
 print("R:",R)
 
