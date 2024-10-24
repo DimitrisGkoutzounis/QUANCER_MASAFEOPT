@@ -476,12 +476,11 @@ X3 = np.array(agent3.kp_values).flatten()
 
 print("X1:",X1)
 
-X = np.column_stack((X1, X2, X3)).T
+X = np.column_stack((X1, X2, X3))
 print("X:",X.shape)
 print("X:",X)
 
-Z_init = np.random.uniform(-10.0,10.0, (N,D)).flatten()
-print("Z_init:",Z_init.shape)
+Z_init = np.random.uniform(0, 10, (N, D))
 
 model_X = agent1.gp
 model_Z = GPy.models.GPRegression(Z_init.reshape(N, D), Y[:, None], GPy.kern.RBF(D))
