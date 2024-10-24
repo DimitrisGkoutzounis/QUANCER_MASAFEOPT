@@ -477,6 +477,11 @@ for i in range(N):
     Kp2 = agent2.kp_values[i]
     Kp3 = agent3.kp_values[i]
     
+    # convert to numpy array
+    kp1 = np.array([Kp1])
+    kp2 = np.array([Kp2])
+    kp3 = np.array([Kp3])
+    
     X[i, 0] = Kp1
     X[i, 1] = Kp2
     X[i, 2] = Kp3
