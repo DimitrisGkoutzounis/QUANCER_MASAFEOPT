@@ -161,7 +161,7 @@ def column_wise(Z_flat, X, D, N):
         diff1 = np.linalg.norm(X_d - mu_d)**2
         diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
-        action_term += 0.1 * diff1 + 0.2 * diff2
+        action_term += 1 * diff1 + 0.2 * diff2
 
         # Gradient-based alignment term
         grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
@@ -176,7 +176,7 @@ def column_wise(Z_flat, X, D, N):
     dot_product_matrix = np.dot(U_z.T, U_x)
     diag_penalty = np.linalg.norm((1 - np.diag(dot_product_matrix))**2)/D
     
-    total_loss = action_term + diag_penalty 
+    total_loss = action_term + 0.2 * diag_penalty 
 
 
     return total_loss
@@ -366,7 +366,7 @@ print("X shape:", X.shape)
 print("Y shape:", Y.shape)
 
 # Initialize Z with the correct dimensions
-Z = np.random.uniform(-1.5, 1.5, (N, D))
+Z = np.random.uniform(0, 10, (N, D))
 print("Z", Z)
 
 
