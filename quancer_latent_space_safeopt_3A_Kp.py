@@ -34,10 +34,9 @@ def retrieve_data(target_uri, modelName, gain_arg, std_args, agent, iteration):
     print(sys_get)
     subprocess.call(sys_get, shell=True)
     # Create 'data_3A' directory if it doesn't exist
-    data_dir = 'data_3A'  # Changed to 'data_3A'
+    data_dir = 'data_3A'  
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
-    # Save the .mat files in the 'data_3A' directory
     shutil.copyfile('servoPDF.mat', f'{data_dir}/servoPDF-{agent}_{iteration}.mat')
     
 def load_agent_data(filename):
@@ -81,7 +80,7 @@ def compute_reward(theta_d, rt_theta1, rt_theta2, rt_theta3, rt_t1, rt_t2, rt_t3
     integral_os1 = np.trapz(os1, rt_t1)
     integral_os2 = np.trapz(os2, rt_t2)
     integral_os3 = np.trapz(os3, rt_t3)
-    total_os = (integral_os1 + integral_os2 + integral_os3) / 3  # Average overshoot error
+    total_os = (integral_os1 + integral_os2 + integral_os3) / 3 
 
     integral_error12 = np.trapz(error12, rt_t1)
     integral_error13 = np.trapz(error13, rt_t1)
@@ -161,9 +160,9 @@ kd2_0 = 0.5
 kp3_0 = 6  
 kd3_0 = 0.8
 
-x0_1 = (kp1_0, kd1_0)
-x0_2 = (kp2_0, kd2_0)
-x0_3 = (kp3_0, kd3_0) 
+x0_1 = (kp1_0)
+x0_2 = (kp2_0)
+x0_3 = (kp3_0) 
 
 # Delay difference between the agents
 td1 = 0.09
@@ -247,11 +246,15 @@ class Agent:
         self.rewards.append(y_meas)
 
 # Kp bounds
-K_bounds = [(0.01, 10), (0.01, 1)]
+K_bounds = [(0.01, 10)]
 
 agent1 = Agent(1, K_bounds, x0_1, reward_0)
 agent2 = Agent(2, K_bounds, x0_2, reward_0)
-agent3 = Agent(3, K_bounds, x0_3, reward_0)  
+agent3 = Agent(3, K_bounds, x0_3, reward_0) 
+
+Kd1 = 0.7
+Kd2 = 0.7
+Kd3 = 0.7 
 
 # Quarc Experiment
 def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
@@ -312,10 +315,10 @@ for iteration in range(1, N+1):
     K2_next = agent2.optimize()
     K3_next = agent3.optimize() 
 
-    print(f"Iteration {iteration}, Agent 1:  -Kp {K1_next[0]} -Kd {K1_next[1]}, Agent 2: -Kp {K2_next[0]} -Kd {K2_next[1]}, Agent 3: -Kp {K3_next[0]} -Kd {K3_next[1]}")
+    print(f"Iteration {iteration}, Agent 1:  -Kp {K1_next} -Kd {Kd1}, Agent 2: -Kp {K2_next} -Kd {Kd2}, Agent 3: -Kp {K3_next} -Kd {Kd3}")
 
     # Run the experiment with kp1_next, kp2_next, kp3_next
-    y, os1, os2, os3 = run_experiment(K1_next[0], K1_next[1], K2_next[0], K2_next[1], K3_next[0], K3_next[1], iteration)
+    y, os1, os2, os3 = run_experiment(K1_next, Kd1, K2_next, Kd2, K3_next, Kd3, iteration)
 
     print(f"Reward: {y}")
     
@@ -450,11 +453,14 @@ plot_iteration(best_iteration)
 # After Bayesian Optimization, compute objective function and minimize
 # =================================================
 
+
+wait = input("Press Enter to start the second phase...")
+
 print("Computing and minimizing the objective function...")
 
 # Collect data into X and Y
 N = len(agent1.kp_values)  # Number of data points (iterations + initial point)
-D = 6  # Total number of parameters (3 agents * 2 parameters per agent)
+D = 3  # Total number of agents
 
 X = np.zeros((N, D))
 Y = np.zeros((N, 1))
@@ -630,6 +636,7 @@ agent3.opt.plot(100)
 print("agent1:", agent1.opt.y)
 print("agent2:", agent2.opt.y)
 print("agent3:", agent3.opt.y)
+
 
 
    
