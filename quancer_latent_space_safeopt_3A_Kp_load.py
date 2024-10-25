@@ -173,7 +173,7 @@ def column_wise(Z_flat, X, D, N):
         diff1 = np.linalg.norm(X_d - mu_d)**2
         diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
-        action_term += 0.1 * diff1 + 0.2 * diff2
+        action_term += 1 * diff1 + 1 * diff2
 
         # Gradient-based alignment term
         grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
@@ -188,7 +188,8 @@ def column_wise(Z_flat, X, D, N):
     dot_product_matrix = np.dot(U_z.T, U_x)
     diag_penalty = np.linalg.norm((1 - np.diag(dot_product_matrix))**2)/D
     
-    total_loss = action_term + diag_penalty 
+    total_loss = action_term + 1 * diag_penalty
+    print(total_loss) 
 
 
     return total_loss
@@ -209,7 +210,7 @@ class Agent:
         self.gp = GPy.models.GPRegression(self.x0, self.y0, self.kernel, noise_var=0.05**2)
 
         self.parameter_set = safeopt.linearly_spaced_combinations(self.bounds, 100)
-        self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.01, beta=1.0, threshold=0.01)
+        self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.01, beta=5.0, threshold=0.01)
 
         self.kp_values = [safe_point]
         self.rewards = [initial_reward]
@@ -259,9 +260,9 @@ with open(f'{agent_data_dir}/agent3_data.txt', 'r') as f3:
         agent3_x3.append(float(row[1]))
         
 
-Kd1 = 0.7
-Kd2 = 0.7
-Kd3 = 0.7
+Kd1 = 0.3
+Kd2 = 0.5
+Kd3 = 0.6
         
 #make the list array
 X1 = np.array(agent1_x1)
@@ -279,9 +280,9 @@ X = np.vstack((X1, X2, X3)).T
 
 N, D = X.shape  
 
-#Z = np.random.uniform(0, 1, (N, D))
+Z = np.random.uniform(0, 1, (N, D))
 
-Z = np.arange(1, N * D + 1).reshape(N, D)
+# Z = np.arange(1, N * D + 1).reshape(N, D)
 
 
 print("Z", Z)
@@ -306,7 +307,7 @@ model_X = GPy.models.GPRegression(X, R, GPy.kern.RBF(input_dim=D))
 
 
 wait = input("Press Enter to minimize...")
-result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-1,'gtol':1e-1,'maxiter':1})
+result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-3,'gtol':1e-3,'maxiter':100})
 Z_opt = result.x.reshape(N, D)
 
 
@@ -316,6 +317,12 @@ print("Z_opt:",Z_opt)
 Z_to_X_0 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X[:, 0].reshape(-1,1), kernel=GPy.kern.RBF(1))
 Z_to_X_1 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), X[:, 1].reshape(-1,1), kernel=GPy.kern.RBF(1))
 Z_to_X_2 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X[:, 2].reshape(-1,1), kernel=GPy.kern.RBF(1))
+
+
+Z_to_X_0.plot()
+Z_to_X_1.plot()
+Z_to_X_2.plot()
+plt.show()
 
 z0_1 = Z_opt[0][0]
 z0_2 = Z_opt[0][1]
@@ -328,7 +335,7 @@ Z3 = Z_opt[:,2]
 
 
 # ------ Initialize agents ------
-K_bounds_Z = [(0.01, 10)]
+K_bounds_Z = [(0, 10)]
 
 kernel1 = GPy.kern.RBF(1)
 
@@ -344,12 +351,12 @@ kernel3 = GPy.kern.RBF(1)
 # Z3 ----> R mapping
 gp3 = GPy.models.GPRegression(Z3.reshape(-1,1), R, kernel3, noise_var=0.05**2)
 
-parameter_set = safeopt.linearly_spaced_combinations([(0.01, 10)], 100)
+parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, 1000)
 
 # Agent safeopt objects
-opt1 = safeopt.SafeOpt(gp1, parameter_set, 0.01, beta=1.0, threshold=0.01)
-opt2 = safeopt.SafeOpt(gp2, parameter_set, 0.01, beta=1.0, threshold=0.01)
-opt3 = safeopt.SafeOpt(gp3, parameter_set, 0.01, beta=1.0, threshold=0.01)
+opt1 = safeopt.SafeOpt(gp1, parameter_set, 0.03, beta=1.0, threshold=0.05)
+opt2 = safeopt.SafeOpt(gp2, parameter_set, 0.03, beta=1.0, threshold=0.05)
+opt3 = safeopt.SafeOpt(gp3, parameter_set, 0.03, beta=1.0, threshold=0.05)
 
 
 
@@ -360,12 +367,16 @@ print(opt1.x)
 print(opt2.x)
 print(opt3.x)
 
+actions_1 = []
+actions_2 = []
+actions_3 = []
 
 
-exit(0)
-
+wait = input("Press enter to start BO")
+reward_z = []
 # Bayesian Optimization in the latent space
 for iteration in range(0, N):
+    print(iteration)
     # Get next Z values from agents
     Z1_next = opt1.optimize()
     Z2_next = opt1.optimize()
@@ -393,13 +404,30 @@ for iteration in range(0, N):
     y, os1, os2, os3 = run_experiment(Kp1_next[0], Kd1, Kp2_next[0], Kd2, Kp3_next[0], Kd3, iteration)
 
     print(f"Reward: {y}")
+    reward_z.append(y)
 
     # Update agents with observations
-    opt1.update(Z1_next, y)
-    opt1.update(Z2_next, y)
-    opt1.update(Z3_next, y)
+    opt1.add_new_data_point(Z1_next,y)
+    opt1.add_new_data_point(Z2_next,y)
+    opt1.add_new_data_point(Z3_next,y)
 
 
-opt1.opt.plot(100)
-opt1.opt.plot(100)
-opt1.opt.plot(100)
+opt1.plot(100)
+opt1.plot(100)
+opt1.plot(100)
+
+plt.figure()
+plt.plot(reward_z, label='Reward_Z')
+plt.plot(rewards, label='Reward_X')
+plt.legend()
+plt.show()
+
+
+x,y = opt1.get_maximum()
+print(max(rewards))
+print(f"x:{x} y {y}")
+print(opt2.get_maximum())
+print(opt3.get_maximum())
+
+
+
