@@ -313,9 +313,9 @@ agent1 = Agent(1, K_bounds, x0_1, reward_0)
 agent2 = Agent(2, K_bounds, x0_2, reward_0)
 agent3 = Agent(3, K_bounds, x0_3, reward_0) 
 
-Kd1 = 0.7
-Kd2 = 0.7
-Kd3 = 0.7 
+Kd1 = 0.3
+Kd2 = 0.5
+Kd3 = 0.6 
 
 # Quarc Experiment
 def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
@@ -348,7 +348,7 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
 
     return reward, os1, os2, os3
 
-N = 10  # Number of iterations
+N = 50  # Number of iterations
 
 # Initialize data files
 agent_data_dir = 'agent_data_3A'  
@@ -448,6 +448,7 @@ print("========= BAYESIAN OPTIMIZATION COMPLETED =========")
 # # After Bayesian Optimization, compute objective function and minimize
 # # =================================================
 
+exit(0)
 
 # # Collect data into X and Y
 N = len(agent1.kp_values)  # Number of data points (iterations + initial point)
@@ -482,7 +483,6 @@ Z_opt = result.x.reshape(N, D)
 print("Z_opt:",Z_opt)   
 
 
-wait = input("go to Dafni")
 
 
 # Build GP models to map Z to X using the data collected

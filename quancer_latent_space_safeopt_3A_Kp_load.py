@@ -333,7 +333,7 @@ actions_1 = np.array([])
 actions_2 = np.array([])
 actions_3 = np.array([])
 
-for iteration in range(0, 5):
+for iteration in range(0, N):
     # Get next Z values from agents
     Z1_next = agent1.optimize()
     Z2_next = agent2.optimize()
