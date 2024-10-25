@@ -367,9 +367,9 @@ exit(0)
 # Bayesian Optimization in the latent space
 for iteration in range(0, N):
     # Get next Z values from agents
-    Z1_next = agent1.optimize()
-    Z2_next = agent2.optimize()
-    Z3_next = agent3.optimize()
+    Z1_next = opt1.optimize()
+    Z2_next = opt1.optimize()
+    Z3_next = opt1.optimize()
     
     
     # Z --> X mapping
@@ -395,11 +395,11 @@ for iteration in range(0, N):
     print(f"Reward: {y}")
 
     # Update agents with observations
-    agent1.update(Z1_next, y)
-    agent2.update(Z2_next, y)
-    agent3.update(Z3_next, y)
+    opt1.update(Z1_next, y)
+    opt1.update(Z2_next, y)
+    opt1.update(Z3_next, y)
 
 
-agent1.opt.plot(100)
-agent2.opt.plot(100)
-agent3.opt.plot(100)
+opt1.opt.plot(100)
+opt1.opt.plot(100)
+opt1.opt.plot(100)
