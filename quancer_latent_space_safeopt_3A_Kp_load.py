@@ -16,6 +16,16 @@ import GPy
 from scipy.optimize import minimize
 from plot_iteration_3A import plot_iteration
 
+modelName = 'servoPDF'
+
+# Target URIs for the agents
+target_uri_1 = 'tcpip://172.22.11.2:17000?keep_alive=1'
+target_uri_2 = 'tcpip://172.22.11.10:17000?keep_alive=1'
+target_uri_3 = 'tcpip://172.22.11.18:17000?keep_alive=1'  
+
+std_args = ' -d ./tmp -uri tcpip://linux-dev:17001'
+
+
 ################ PHASE 1 ################
 
 def sent_command(target_uri, modelName, gain_arg, std_args):
@@ -32,7 +42,7 @@ def retrieve_data(target_uri, modelName, gain_arg, std_args, agent, iteration):
     """
     sys_get = f'quarc_run -u -t {target_uri} {modelName}.rt-linux_rt_armv7{gain_arg}{std_args}'
     subprocess.call(sys_get, shell=True)
-    data_dir = 'data_3A'  
+    data_dir = 'data_3A_baseline'  
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
     shutil.copyfile('servoPDF.mat', f'{data_dir}/servoPDF-{agent}_{iteration}.mat')
@@ -116,9 +126,9 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
     retrieve_data(target_uri_2, modelName, gain_arg2, std_args, 2, iteration)
     retrieve_data(target_uri_3, modelName, gain_arg3, std_args, 3, iteration) 
 
-    rt_t1, rt_theta1, theta_d = load_agent_data(f'data_3A/servoPDF-1_{iteration}.mat') 
-    rt_t2, rt_theta2, _ = load_agent_data(f'data_3A/servoPDF-2_{iteration}.mat')       
-    rt_t3, rt_theta3, _ = load_agent_data(f'data_3A/servoPDF-3_{iteration}.mat')     
+    rt_t1, rt_theta1, theta_d = load_agent_data(f'data_3A_baseline/servoPDF-1_{iteration}.mat') 
+    rt_t2, rt_theta2, _ = load_agent_data(f'data_3A_baseline/servoPDF-2_{iteration}.mat')       
+    rt_t3, rt_theta3, _ = load_agent_data(f'data_3A_baseline/servoPDF-3_{iteration}.mat')     
     
     reward, os1, os2, os3 = compute_reward(theta_d, rt_theta1, rt_theta2, rt_theta3, rt_t1, rt_t2, rt_t3)
 
@@ -131,8 +141,6 @@ def compute_gradient(model, X):
     dmu_dX, _ = model.predictive_gradients(X)
     return dmu_dX
 
-global action_term 
-action_term = 0.0
 
 def column_wise(Z_flat, X, D, N):
     Z = Z_flat.reshape(N, D)
@@ -201,7 +209,7 @@ class Agent:
         self.gp = GPy.models.GPRegression(self.x0, self.y0, self.kernel, noise_var=0.05**2)
 
         self.parameter_set = safeopt.linearly_spaced_combinations(self.bounds, 100)
-        self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.03, beta=1.0, threshold=0.05)
+        self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.01, beta=1.0, threshold=0.01)
 
         self.kp_values = [safe_point]
         self.rewards = [initial_reward]
@@ -216,123 +224,147 @@ class Agent:
         self.kp_values.append(x_next)
         self.rewards.append(y_meas)
 
-# # Create directories to save data and plots
-# if not os.path.exists('plots_3A'):
-#     os.makedirs('plots_3A')
-# if not os.path.exists('data_3A'): 
-#     os.makedirs('data_3A')
-# if not os.path.exists('agent_data_3A'): 
-#     os.makedirs('agent_data_3A')
-
-modelName = 'servoPDF'
-
-# Target URIs for the agents
-target_uri_1 = 'tcpip://172.22.11.2:17000?keep_alive=1'
-target_uri_2 = 'tcpip://172.22.11.10:17000?keep_alive=1'
-target_uri_3 = 'tcpip://172.22.11.18:17000?keep_alive=1'  
-
-std_args = ' -d ./tmp -uri tcpip://linux-dev:17001'
 
 
-# Initial safepoint values.
-kp1_0 = 4
-kd1_0 = 0.3
-
-kp2_0 = 8
-kd2_0 = 0.5
-
-kp3_0 = 6  
-kd3_0 = 0.8
-
-x0_1 = [(kp1_0)]
-x0_2 = [(kp2_0)]
-x0_3 = [(kp3_0)] 
 
 # Delay difference between the agents
 td1 = 0.09
 td2 = 0.045  
 td3 = 0.001 
 
+agent_data_dir = 'agent_data_3A_baseline'
 
+agent1_x1 = []
+agent2_x2 = []
+agent3_x3 = []
+rewards = []
 
-N = 10  # Number of iterations
-D = 3  # Total number of agents
-
-
-# Existing data arrays with 11 elements each
-X1 = [4, 3.8445454545454543, 4.449999999999999, 4.752727272727272, 5.156363636363636, 5.56, 3.5418181818181815, 5.862727272727272, 6.165454545454545, 6.468181818181818, 6.7709090909090905]
-X2 = [8, 7.779999999999999, 8.486363636363636, 8.789090909090909, 9.192727272727272, 9.596363636363636, 7.477272727272727, 9.899090909090908, 7.174545454545454, 6.7709090909090905, 6.468181818181818]
-X3 = [6, 6.165454545454545, 5.56, 5.257272727272727, 4.8536363636363635, 4.449999999999999, 6.468181818181818, 4.1472727272727266, 3.8445454545454543, 3.5418181818181815, 3.239090909090909]
-
-Y = [0.26771307798947697, 0.22289966836140557, 0.2584023809211046, 0.27314729879275146, 0.279485034370205, 0.25227246991739516, 0.20899785646797334, 0.23513342181103883, 0.22974772668062596, 0.2135091358808158, 0.19698300906731814]
-
-# Convert to numpy arrays
-X1 = np.array(X1)
-X2 = np.array(X2)
-X3 = np.array(X3)
-Y = np.array(Y).reshape(-1,1)
-
-# Combine X1, X2, X3 into a single array
-X = np.vstack((X1, X2, X3)).T  # Shape: (11, 3)
-
-# Corrected: Set N based on the actual data length
-N, D = X.shape  # N = 11, D = 3
-
-print("X shape:", X.shape)
-print("Y shape:", Y.shape)
-
-# Initialize Z with the correct dimensions
-Z = np.random.uniform(-1.5, 1.5, (N, D))
-print("Z", Z)
-
-
-
-print(X1.shape)
-
+with open(f'{agent_data_dir}/agent1_data.txt', 'r') as f1:
+    reader = csv.reader(f1)
+    next(reader)  # Skip header
+    for row in reader:
+        agent1_x1.append(float(row[1]))
+        rewards.append(float(row[2]))
+        
+with open(f'{agent_data_dir}/agent2_data.txt', 'r') as f2:
+    reader = csv.reader(f2)
+    next(reader)  # Skip header
+    for row in reader:
+        agent2_x2.append(float(row[1]))
+        
+with open(f'{agent_data_dir}/agent3_data.txt', 'r') as f3:
+    reader = csv.reader(f3)
+    next(reader)  # Skip header
+    for row in reader:
+        agent3_x3.append(float(row[1]))
+        
 
 Kd1 = 0.7
 Kd2 = 0.7
 Kd3 = 0.7
+        
+#make the list array
+X1 = np.array(agent1_x1)
+X2 = np.array(agent2_x2)
+X3 = np.array(agent3_x3)
+R = np.array(rewards).reshape(-1,1)
+
+print("X1:",X1)
+print("X2:",X2)
+print("X3:",X3)
+print("R:",R)
+
+# Combine data
+X = np.vstack((X1, X2, X3)).T  
+
+N, D = X.shape  
+
+#Z = np.random.uniform(0, 1, (N, D))
+
+Z = np.arange(1, N * D + 1).reshape(N, D)
 
 
-X1_0 = np.array(X1[0]).flatten()
-X2_0 = np.array(X2[0]).flatten()
-X3_0 = np.array(X3[0]).flatten()
+print("Z", Z)
+print("X", X)
 
-Y_0 = Y[0][0]
+print("Z shape:",Z.shape)
+print("X shape:",X.shape)
 
-print("X1_0:",Y_0)
-agent1 = Agent(1, [(0, 10)], X1_0, Y_0)
-agent2 = Agent(2, [(0, 10)], X2_0, Y_0)
-agent3 = Agent(3, [(0, 10)], X3_0, Y_0)
+# X1_0 = np.array(X1[0]).flatten()
+# X2_0 = np.array(X2[0]).flatten()
+# X3_0 = np.array(X3[0]).flatten()
 
-R = Y 
+# Y_0 = R[0][0]
 
-print(R.ndim)
+# agent1 = Agent(1, [(0, 10)], X1_0, Y_0)
+# agent2 = Agent(2, [(0, 10)], X2_0, Y_0)
+# agent3 = Agent(3, [(0, 10)], X3_0, Y_0)
 
+
+# X ---> R mapping 
 model_X = GPy.models.GPRegression(X, R, GPy.kern.RBF(input_dim=D))
 
-# print(Z_init.shape)
-# pri
-result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-2,'gtol':1e-2})
+
+wait = input("Press Enter to minimize...")
+result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-1,'gtol':1e-1,'maxiter':1})
 Z_opt = result.x.reshape(N, D)
 
 
 print("Z_opt:",Z_opt)   
 
-
-# Build GP models to map Z to X using the data collected
-
-
-# For Kp
+# Z ---> X mapping
 Z_to_X_0 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X[:, 0].reshape(-1,1), kernel=GPy.kern.RBF(1))
 Z_to_X_1 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), X[:, 1].reshape(-1,1), kernel=GPy.kern.RBF(1))
 Z_to_X_2 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X[:, 2].reshape(-1,1), kernel=GPy.kern.RBF(1))
 
-actions_1 = np.array([])
-actions_2 = np.array([])
-actions_3 = np.array([])
+z0_1 = Z_opt[0][0]
+z0_2 = Z_opt[0][1]
+z0_3 = Z_opt[0][2]
 
+Z1 = Z_opt[:,0]
+Z2 = Z_opt[:,1]
+Z3 = Z_opt[:,2]
+
+
+
+# ------ Initialize agents ------
+K_bounds_Z = [(0.01, 10)]
+
+kernel1 = GPy.kern.RBF(1)
+
+# Z1 ----> R mapping
+gp1 = GPy.models.GPRegression(Z1.reshape(-1,1), R, kernel1, noise_var=0.05**2)
+
+kernel2 = GPy.kern.RBF(1)
+# Z2 ----> R mapping
+
+gp2 = GPy.models.GPRegression(Z2.reshape(-1,1), R, kernel2, noise_var=0.05**2)
+
+kernel3 = GPy.kern.RBF(1)
+# Z3 ----> R mapping
+gp3 = GPy.models.GPRegression(Z3.reshape(-1,1), R, kernel3, noise_var=0.05**2)
+
+parameter_set = safeopt.linearly_spaced_combinations([(0.01, 10)], 100)
+
+# Agent safeopt objects
+opt1 = safeopt.SafeOpt(gp1, parameter_set, 0.01, beta=1.0, threshold=0.01)
+opt2 = safeopt.SafeOpt(gp2, parameter_set, 0.01, beta=1.0, threshold=0.01)
+opt3 = safeopt.SafeOpt(gp3, parameter_set, 0.01, beta=1.0, threshold=0.01)
+
+
+
+print("Agents initialized...")
+
+
+print(opt1.x)
+print(opt2.x)
+print(opt3.x)
+
+
+
+exit(0)
+
+# Bayesian Optimization in the latent space
 for iteration in range(0, N):
     # Get next Z values from agents
     Z1_next = agent1.optimize()
@@ -345,6 +377,10 @@ for iteration in range(0, N):
     Kp2_next, _ = Z_to_X_1.predict(Z2_next[0].reshape(-1,1))
     Kp3_next, _ = Z_to_X_2.predict(Z3_next[0].reshape(-1,1))
     
+    print(f"Kp1_next: {Kp1_next}")
+    print(f"Kp2_next: {Kp2_next}")
+    print(f"Kp3_next: {Kp3_next}")
+    
     Kp1_next = np.asarray([Kp1_next]).flatten()
     Kp2_next = np.asarray([Kp2_next]).flatten()
     Kp3_next = np.asarray([Kp3_next]).flatten()
@@ -353,8 +389,6 @@ for iteration in range(0, N):
     actions_2 = np.append(actions_2, Kp2_next)
     actions_3 = np.append(actions_3, Kp3_next)
     
-    wait = input("Next...")
-
     # Run the experiment with the mapped Kp and Kd values
     y, os1, os2, os3 = run_experiment(Kp1_next[0], Kd1, Kp2_next[0], Kd2, Kp3_next[0], Kd3, iteration)
 
