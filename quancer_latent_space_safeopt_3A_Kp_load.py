@@ -31,9 +31,7 @@ def retrieve_data(target_uri, modelName, gain_arg, std_args, agent, iteration):
     Retrieve data from the target.
     """
     sys_get = f'quarc_run -u -t {target_uri} {modelName}.rt-linux_rt_armv7{gain_arg}{std_args}'
-    print(sys_get)
     subprocess.call(sys_get, shell=True)
-    # Create 'data_3A' directory if it doesn't exist
     data_dir = 'data_3A'  
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
@@ -98,30 +96,33 @@ def compute_reward(theta_d, rt_theta1, rt_theta2, rt_theta3, rt_t1, rt_t2, rt_t3
     
     return total_error, os1, os2, os3
        
-def plot_data(rt_t1, rt_theta1, os1, rt_t2, rt_theta2, os2, rt_t3, rt_theta3, os3):
-    """
-    Plot the data from the agents
-    """
-    plt.figure(1)
-    plt.subplot(1,2,1)
-    plt.plot(rt_t1, rt_theta1, label='Agent-1')
-    plt.plot(rt_t2, rt_theta2, label='Agent-2')
-    plt.plot(rt_t3, rt_theta3, label='Agent-3')
-    plt.grid(True)
-    plt.xlabel('t (s)')
-    plt.ylabel('theta')
-    plt.title("Theta over time")
+
+# Quarc Experiment
+def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
     
-    plt.subplot(1,2,2)
-    plt.plot(rt_t1[:4000], os1[:4000], label='Agent-1 OS')
-    plt.plot(rt_t2[:4000], os2[:4000], label='Agent-2 OS')
-    plt.plot(rt_t3[:4000], os3[:4000], label='Agent-3 OS')
-    plt.grid(True)
-    plt.xlabel('t (s)')
-    plt.ylabel('theta')
-    plt.title("Error over time")
-    plt.legend()
-    plt.show()
+    # Set gain arguments
+    gain_arg1 = f' -Kp {kp1} -Kd {kd1}'
+    gain_arg2 = f' -Kp {kp2} -Kd {kd2}'
+    gain_arg3 = f' -Kp {kp3} -Kd {kd3}'
+
+    sent_command(target_uri_1, modelName, gain_arg1, std_args)
+    sent_command(target_uri_2, modelName, gain_arg2, std_args)
+    sent_command(target_uri_3, modelName, gain_arg3, std_args) 
+
+    # Await experiment completion
+    time.sleep(7)
+
+    retrieve_data(target_uri_1, modelName, gain_arg1, std_args, 1, iteration)
+    retrieve_data(target_uri_2, modelName, gain_arg2, std_args, 2, iteration)
+    retrieve_data(target_uri_3, modelName, gain_arg3, std_args, 3, iteration) 
+
+    rt_t1, rt_theta1, theta_d = load_agent_data(f'data_3A/servoPDF-1_{iteration}.mat') 
+    rt_t2, rt_theta2, _ = load_agent_data(f'data_3A/servoPDF-2_{iteration}.mat')       
+    rt_t3, rt_theta3, _ = load_agent_data(f'data_3A/servoPDF-3_{iteration}.mat')     
+    
+    reward, os1, os2, os3 = compute_reward(theta_d, rt_theta1, rt_theta2, rt_theta3, rt_t1, rt_t2, rt_t3)
+
+    return reward, os1, os2, os3
     
     
 
@@ -130,6 +131,8 @@ def compute_gradient(model, X):
     dmu_dX, _ = model.predictive_gradients(X)
     return dmu_dX
 
+global action_term 
+action_term = 0.0
 
 def column_wise(Z_flat, X, D, N):
     Z = Z_flat.reshape(N, D)
@@ -138,9 +141,11 @@ def column_wise(Z_flat, X, D, N):
     model_Z = GPy.models.GPRegression(Z, R.reshape(-1,1), GPy.kern.RBF(D))
     model_all = GPy.models.GPRegression(Z, X,  GPy.kern.RBF(D))
     mu_all, _ = model_all.predict_noiseless(Z)
-    # print("mu_all\n", mu_all)
 
     loss = 0.0
+    action_term = 0.0
+    
+    
     grad_R_Z_norm_column = []
     grad_R_X_norm_column = []
 
@@ -148,7 +153,6 @@ def column_wise(Z_flat, X, D, N):
     U_z = np.zeros((N, D))
     U_x = np.zeros((N, D))
     
-    action_term = 0.0
 
     for d in range(D):
         X_d = np.zeros_like(X)
@@ -161,7 +165,7 @@ def column_wise(Z_flat, X, D, N):
         diff1 = np.linalg.norm(X_d - mu_d)**2
         diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
-        action_term += 1 * diff1 + 0.2 * diff2
+        action_term += 0.1 * diff1 + 0.2 * diff2
 
         # Gradient-based alignment term
         grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
@@ -176,7 +180,7 @@ def column_wise(Z_flat, X, D, N):
     dot_product_matrix = np.dot(U_z.T, U_x)
     diag_penalty = np.linalg.norm((1 - np.diag(dot_product_matrix))**2)/D
     
-    total_loss = action_term + 0.2 * diag_penalty 
+    total_loss = action_term + diag_penalty 
 
 
     return total_loss
@@ -229,15 +233,6 @@ target_uri_3 = 'tcpip://172.22.11.18:17000?keep_alive=1'
 
 std_args = ' -d ./tmp -uri tcpip://linux-dev:17001'
 
-# # Download model to target
-# sys1dl = f'quarc_run -D -t {target_uri_1} {modelName}.rt-linux_rt_armv7{std_args}'
-# sys2dl = f'quarc_run -D -t {target_uri_2} {modelName}.rt-linux_rt_armv7{std_args}'
-# sys3dl = f'quarc_run -D -t {target_uri_3} {modelName}.rt-linux_rt_armv7{std_args}' 
-
-# # Run the system commands
-# subprocess.call(sys1dl, shell=True)
-# subprocess.call(sys2dl, shell=True)
-# subprocess.call(sys3dl, shell=True)  
 
 # Initial safepoint values.
 kp1_0 = 4
@@ -258,90 +253,11 @@ td1 = 0.09
 td2 = 0.045  
 td3 = 0.001 
 
-# # Create gain arguments
-# gain_arg1 = f' -Kp {kp1_0} -Kd {kd1_0}'
-# gain_arg2 = f' -Kp {kp2_0} -Kd {kd2_0}'
-# gain_arg3 = f' -Kp {kp3_0} -Kd {kd3_0}'  
 
-# print(f'Initial gain arguments for Agent 1: {gain_arg1}')
-# print(f'Initial gain arguments for Agent 2: {gain_arg2}')
-# print(f'Initial gain arguments for Agent 3: {gain_arg3}')  
-
-# # Create system command for gain arguments
-# sys1run = f'quarc_run -l -t {target_uri_1} {modelName}.rt-linux_rt_armv7{gain_arg1} -td {td1:.5f} {std_args}'
-# sys2run = f'quarc_run -l -t {target_uri_2} {modelName}.rt-linux_rt_armv7{gain_arg2} -td {td2:.5f} {std_args}' 
-# sys3run = f'quarc_run -l -t {target_uri_3} {modelName}.rt-linux_rt_armv7{gain_arg3} -td {td3:.5f} {std_args}'  
-
-# # Run the system commands
-# subprocess.call(sys1run, shell=True)
-# subprocess.call(sys2run, shell=True)
-# subprocess.call(sys3run, shell=True)  
-
-# sent_command(target_uri_1, modelName, gain_arg1, std_args)
-# sent_command(target_uri_2, modelName, gain_arg2, std_args)
-# sent_command(target_uri_3, modelName, gain_arg3, std_args) 
-
-# # Wait for the experiment to finish
-# time.sleep(7)
-
-# # Retrieve data from Agents
-# retrieve_data(target_uri_1, modelName, gain_arg1, std_args, 1, 0)
-# retrieve_data(target_uri_2, modelName, gain_arg2, std_args, 2, 0)
-# retrieve_data(target_uri_3, modelName, gain_arg3, std_args, 3, 0)  
-
-# # Load data from Agents
-# rt_t1, rt_theta1, theta_d = load_agent_data('data_3A/servoPDF-1_0.mat') 
-# rt_t2, rt_theta2, _ = load_agent_data('data_3A/servoPDF-2_0.mat')       
-# rt_t3, rt_theta3, _ = load_agent_data('data_3A/servoPDF-3_0.mat')       
-
-# # Compute initial safe reward
-# reward_0, os1_0, os2_0, os3_0 = compute_reward(theta_d, rt_theta1, rt_theta2, rt_theta3, rt_t1, rt_t2, rt_t3)
-
-# print(f'Initial reward: {reward_0}')
-# print(f"Initial error1: {os1_0}")
-# print(f"Initial error2: {os2_0}")
-# print(f"Initial error3: {os3_0}") 
-# wait = input("Press Enter to start Bayesian Optimization...")
-
-# =================== Bayesian Optimization ===================
-
-
-
-
-
-# Quarc Experiment
-def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
-    
-    # Set gain arguments
-    gain_arg1 = f' -Kp {kp1} -Kd {kd1}'
-    gain_arg2 = f' -Kp {kp2} -Kd {kd2}'
-    gain_arg3 = f' -Kp {kp3} -Kd {kd3}'
-
-    sent_command(target_uri_1, modelName, gain_arg1, std_args)
-    sent_command(target_uri_2, modelName, gain_arg2, std_args)
-    sent_command(target_uri_3, modelName, gain_arg3, std_args) 
-
-    # Await experiment completion
-    time.sleep(7)
-
-    retrieve_data(target_uri_1, modelName, gain_arg1, std_args, 1, iteration)
-    retrieve_data(target_uri_2, modelName, gain_arg2, std_args, 2, iteration)
-    retrieve_data(target_uri_3, modelName, gain_arg3, std_args, 3, iteration) 
-
-    rt_t1, rt_theta1, theta_d = load_agent_data(f'data_3A/servoPDF-1_{iteration}.mat') 
-    rt_t2, rt_theta2, _ = load_agent_data(f'data_3A/servoPDF-2_{iteration}.mat')       
-    rt_t3, rt_theta3, _ = load_agent_data(f'data_3A/servoPDF-3_{iteration}.mat')     
-    
-    reward, os1, os2, os3 = compute_reward(theta_d, rt_theta1, rt_theta2, rt_theta3, rt_t1, rt_t2, rt_t3)
-
-    return reward, os1, os2, os3
 
 N = 10  # Number of iterations
 D = 3  # Total number of agents
 
-# # =================================================
-# # After Bayesian Optimization, compute objective function and minimize
-# # =================================================
 
 # Existing data arrays with 11 elements each
 X1 = [4, 3.8445454545454543, 4.449999999999999, 4.752727272727272, 5.156363636363636, 5.56, 3.5418181818181815, 5.862727272727272, 6.165454545454545, 6.468181818181818, 6.7709090909090905]
@@ -366,7 +282,7 @@ print("X shape:", X.shape)
 print("Y shape:", Y.shape)
 
 # Initialize Z with the correct dimensions
-Z = np.random.uniform(0, 10, (N, D))
+Z = np.random.uniform(-1.5, 1.5, (N, D))
 print("Z", Z)
 
 
@@ -405,9 +321,6 @@ Z_opt = result.x.reshape(N, D)
 print("Z_opt:",Z_opt)   
 
 
-wait = input("go to Dafni")
-
-
 # Build GP models to map Z to X using the data collected
 
 
@@ -425,6 +338,8 @@ for iteration in range(0, 5):
     Z1_next = agent1.optimize()
     Z2_next = agent2.optimize()
     Z3_next = agent3.optimize()
+    
+    
     # Z --> X mapping
     Kp1_next, _ = Z_to_X_0.predict(Z1_next[0].reshape(-1,1))
     Kp2_next, _ = Z_to_X_1.predict(Z2_next[0].reshape(-1,1))
@@ -454,13 +369,3 @@ for iteration in range(0, 5):
 agent1.opt.plot(100)
 agent2.opt.plot(100)
 agent3.opt.plot(100)
-
-
-
-
-
-   
-
-# print("========= SECOND PHASE COMPLETED =========")
-
-
