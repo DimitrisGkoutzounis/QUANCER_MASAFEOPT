@@ -431,3 +431,117 @@ print(opt3.get_maximum())
 
 
 
+X1_1 = opt1.x
+X2_1 = opt2.x
+X3_1 = opt3.x
+
+K_bounds_Z = [(-20, 20)]
+
+Y = opt1.y
+
+X_1 = np.vstack((X1_1, X2_1, X3_1)).T
+
+Z = np.random.uniform(0, 1, (N, D))
+
+model_X = GPy.models.GPRegression(X_1, Y, GPy.kern.RBF(input_dim=D))
+
+
+result = minimize(column_wise, Z.flatten(), args=(X_1, D, N), method='L-BFGS-B',options={'ftol':1e-3,'gtol':1e-3,'maxiter':100})
+
+Z_opt = result.x.reshape(N, D)
+
+
+Z_to_X_0_1 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X_1[:, 0].reshape(-1,1), kernel=GPy.kern.RBF(1))
+Z_to_X_1_1 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), X_1[:, 1].reshape(-1,1), kernel=GPy.kern.RBF(1))
+Z_to_X_2_1 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X_1[:, 2].reshape(-1,1), kernel=GPy.kern.RBF(1))
+
+
+Z_to_X_0_1.plot()
+Z_to_X_1_1.plot()
+Z_to_X_2_1.plot()
+
+kernel1 = GPy.kern.RBF(1)
+
+
+gp1 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), Y, kernel1, noise_var=0.05**2)
+
+kernel2 = GPy.kern.RBF(1)
+
+gp2 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), Y, kernel2, noise_var=0.05**2)
+
+kernel3 = GPy.kern.RBF(1)
+
+gp3 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), Y, kernel3, noise_var=0.05**2)
+
+parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, 1000)
+
+# Agent safeopt objects
+opt1 = safeopt.SafeOpt(gp1, parameter_set, 0.03, beta=1.0, threshold=0.05)
+opt2 = safeopt.SafeOpt(gp2, parameter_set, 0.03, beta=1.0, threshold=0.05)
+opt3 = safeopt.SafeOpt(gp3, parameter_set, 0.03, beta=1.0, threshold=0.05)
+
+
+
+wait = input("Press enter to start BO")
+reward_z = []
+# Bayesian Optimization in the latent space
+for iteration in range(0, N):
+    print(iteration)
+    # Get next Z values from agents
+    Z1_next = opt1.optimize()
+    Z2_next = opt1.optimize()
+    Z3_next = opt1.optimize()
+    
+    
+    # Z --> X mapping
+    Kp1_next, _ = Z_to_X_0.predict(Z1_next[0].reshape(-1,1))
+    Kp2_next, _ = Z_to_X_1.predict(Z2_next[0].reshape(-1,1))
+    Kp3_next, _ = Z_to_X_2.predict(Z3_next[0].reshape(-1,1))
+    
+    print(f"Kp1_next: {Kp1_next}")
+    print(f"Kp2_next: {Kp2_next}")
+    print(f"Kp3_next: {Kp3_next}")
+    
+    Kp1_next = np.asarray([Kp1_next]).flatten()
+    Kp2_next = np.asarray([Kp2_next]).flatten()
+    Kp3_next = np.asarray([Kp3_next]).flatten()
+    
+    actions_1 = np.append(actions_1, Kp1_next)
+    actions_2 = np.append(actions_2, Kp2_next)
+    actions_3 = np.append(actions_3, Kp3_next)
+    
+    # Run the experiment with the mapped Kp and Kd values
+    y, os1, os2, os3 = run_experiment(Kp1_next[0], Kd1, Kp2_next[0], Kd2, Kp3_next[0], Kd3, iteration)
+
+    print(f"Reward: {y}")
+    reward_z.append(y)
+
+    # Update agents with observations
+    opt1.add_new_data_point(Z1_next,y)
+    opt1.add_new_data_point(Z2_next,y)
+    opt1.add_new_data_point(Z3_next,y)
+
+
+opt1.plot(100)
+opt1.plot(100)
+opt1.plot(100)
+
+plt.figure()
+plt.plot(reward_z, label='Reward_Z')
+plt.plot(rewards, label='Reward_X')
+plt.legend()
+plt.show()
+
+
+x,y = opt1.get_maximum()
+print(max(rewards))
+print(f"x:{x} y {y}")
+print(opt2.get_maximum())
+print(opt3.get_maximum())
+
+
+
+
+
+
+
