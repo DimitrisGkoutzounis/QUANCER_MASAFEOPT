@@ -309,14 +309,11 @@ if __name__ == '__main__':
         wait = input("Press Enter to minimize...")
         result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-1,'gtol':1e-1,'maxiter':1})
         Z_opt = result.x.reshape(N, D)
-        
-        X_parameter_set = safeopt.linearly_spaced_combinations([(0,10)], 100)
-        print(X_parameter_set)
-        
+                
         # Z ---> X mapping
-        Z_to_X_0 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X_parameter_set, kernel=GPy.kern.RBF(1))
-        Z_to_X_1 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), X_parameter_set, kernel=GPy.kern.RBF(1))
-        Z_to_X_2 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X_parameter_set.reshape(-1,1), kernel=GPy.kern.RBF(1))
+        Z_to_X_0 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X[:,1].reshape(-1,1), kernel=GPy.kern.RBF(1))
+        Z_to_X_1 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), X[:,2].reshape(-1,1), kernel=GPy.kern.RBF(1))
+        Z_to_X_2 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X[:,3].reshape(-1,1), kernel=GPy.kern.RBF(1))
 
         Z_to_X_0.plot()
         plt.title('Z1 --> X1')
