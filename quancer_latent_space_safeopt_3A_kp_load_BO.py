@@ -336,15 +336,15 @@ if __name__ == '__main__':
         
         # Find the lowest value of Z_to_X models and store them in an array
         Z_to_X_min_values = [
-            np.min(Z_to_X_0.Y),
-            np.min(Z_to_X_1.Y),
-            np.min(Z_to_X_2.Y)
+            np.min(Z_to_X_0.X),
+            np.min(Z_to_X_1.X),
+            np.min(Z_to_X_2.X)
         ]
         
         Z_to_X_max_values = [
-            np.max(Z_to_X_0.Y),
-            np.max(Z_to_X_1.Y),
-            np.max(Z_to_X_2.Y)
+            np.max(Z_to_X_0.X),
+            np.max(Z_to_X_1.X),
+            np.max(Z_to_X_2.X)
         ]
         
 
