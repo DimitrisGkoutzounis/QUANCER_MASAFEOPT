@@ -334,20 +334,21 @@ if __name__ == '__main__':
         Z2 = Z_opt[:,1]
         Z3 = Z_opt[:,2]
         
-        lb1 = np.min(Z_to_X_0.X)
-        lb2 = np.min(Z_to_X_1.X)
-        lb3 = np.min(Z_to_X_2.X)
+        lb1 = np.min(Z_to_X_0.X).flatten()
+        lb2 = np.min(Z_to_X_1.X).flatten()
+        lb3 = np.min(Z_to_X_2.X).flatten()
         
-        lbs = [lb1, lb2, lb3]
+        lbs = np.array([lb1, lb2, lb3]).flatten()
         
-        up1 = np.max(Z_to_X_0.X)
-        up2 = np.max(Z_to_X_1.X)
-        up3 = np.max(Z_to_X_2.X)
         
-        ups = [up1, up2, up3]
+        up1 = np.max(Z_to_X_0.X).flatten()
+        up2 = np.max(Z_to_X_1.X).flatten()
+        up3 = np.max(Z_to_X_2.X).flatten()
         
-        lb_all = np.min(lbs)
-        up_all = np.max(ups)
+        ups = np.array([up1, up2, up3]).flatten()
+        
+        lb_all = np.min(lbs).flatten()
+        up_all = np.max(ups).flatten()
         
         K_bounds_Z = [(lbs, ups)]
         
