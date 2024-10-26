@@ -202,7 +202,7 @@ def column_wise(Z_flat, X, D, N):
         diff1 = np.linalg.norm(X_d - mu_d)**2
         diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
-        action_term += 1 * diff1 + 0.8 * diff2
+        action_term += 1 * diff1 + 1 * diff2
 
         # Gradient-based alignment term
         grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
@@ -282,7 +282,6 @@ if __name__ == '__main__':
             print("X1",X1)
             print("X2",X2)
             print("X3",X3)
-            print("Rewards", rewards)
             
                 
             
@@ -308,8 +307,11 @@ if __name__ == '__main__':
         # ----------- Minimize the loss function ------------
 
         wait = input("Press Enter to minimize...")
-        result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-3,'gtol':1e-3,'maxiter':100})
+        result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-1,'gtol':1e-1,'maxiter':100})
         Z_opt = result.x.reshape(N, D)
+        
+        X_parameter_set = safeopt.linearly_spaced_combinations([(0,10)], 100)
+        print(X_parameter_set)
         
         # Z ---> X mapping
         Z_to_X_0 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X[:, 0].reshape(-1,1), kernel=GPy.kern.RBF(1))
@@ -336,7 +338,7 @@ if __name__ == '__main__':
         
         
 
-        K_bounds_Z = [(0,15)]
+        K_bounds_Z = [(-10,10)]
         
         print(K_bounds_Z)
         
@@ -352,12 +354,12 @@ if __name__ == '__main__':
         gp2 = GPy.models.GPRegression(Z2.reshape(-1,1), R, kernel2, noise_var=0.05**2)
         # Z3 ----> R mapping
         gp3 = GPy.models.GPRegression(Z3.reshape(-1,1), R, kernel3, noise_var=0.05**2)
-        parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, 100)
+        latent_parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, 1000)
 
         # Agent safeopt objects
-        opt1 = safeopt.SafeOpt(gp1, parameter_set, 0.03, beta=1.0, threshold=0.05)
-        opt2 = safeopt.SafeOpt(gp2, parameter_set, 0.03, beta=1.0, threshold=0.05)
-        opt3 = safeopt.SafeOpt(gp3, parameter_set, 0.03, beta=1.0, threshold=0.05)
+        opt1 = safeopt.SafeOpt(gp1, latent_parameter_set, 0.03, beta=1.0, threshold=0.05)
+        opt2 = safeopt.SafeOpt(gp2, latent_parameter_set, 0.03, beta=1.0, threshold=0.05)
+        opt3 = safeopt.SafeOpt(gp3, latent_parameter_set, 0.03, beta=1.0, threshold=0.05)
 
         print("Agents initialized...")
 
@@ -406,6 +408,11 @@ if __name__ == '__main__':
             opt1.add_new_data_point(Z1_next,y)
             opt1.add_new_data_point(Z2_next,y)
             opt1.add_new_data_point(Z3_next,y)
+            
+            opt1.plot(100)
+            opt2.plot(100)
+            opt3.plot(100)
+            plt.savefig(f'{z_data_dir}/safeopt_{iteration}.png')
 
 
         write_z_data(z_data_dir,actions_1,actions_2,actions_3,reward_z, j+1)
