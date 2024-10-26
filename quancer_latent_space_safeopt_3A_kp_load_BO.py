@@ -349,12 +349,12 @@ if __name__ == '__main__':
         
 
         # Find the lowest value among them
-        lowest_value = np.min(Z_to_X_min_values)
+        min_value = np.min(Z_to_X_min_values)
         max_value = np.max(Z_to_X_max_values)
-        print("Lowest value among Z_to_X models: ", lowest_value)
+        print("Lowest value among Z_to_X models: ", min_value)
         print("Max value among Z_to_X models: ", max_value)
 
-        K_bounds_Z = [(0.01), (10)]
+        K_bounds_Z = [(min_value), (max_value)]
         
         print(K_bounds_Z)
         
