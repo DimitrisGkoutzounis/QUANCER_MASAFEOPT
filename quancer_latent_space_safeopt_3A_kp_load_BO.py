@@ -354,7 +354,7 @@ if __name__ == '__main__':
         print("Lowest value among Z_to_X models: ", min_value)
         print("Max value among Z_to_X models: ", max_value)
 
-        K_bounds_Z = [(min_value), (max_value)]
+        K_bounds_Z = [(min_value,max_value)]
         
         print(K_bounds_Z)
         
