@@ -120,7 +120,7 @@ def load_z_data_temp(z_data_dir,iteration):
                     agent1_x1.append(float(row[1]))
                     agent2_x2.append(float(row[2]))
                     agent3_x3.append(float(row[3]))
-                    rewards.append(float(row[2]))
+                    rewards.append(float(row[4]))
                     
             agent1_x1 = np.array(agent1_x1)
             agent2_x2 = np.array(agent2_x2)
@@ -202,7 +202,7 @@ def column_wise(Z_flat, X, D, N):
         diff1 = np.linalg.norm(X_d - mu_d)**2
         diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
-        action_term += 1 * diff1 + 1 * diff2
+        action_term += 1 * diff1 + 0.8 * diff2
 
         # Gradient-based alignment term
         grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
@@ -225,6 +225,7 @@ def column_wise(Z_flat, X, D, N):
 
 
 z_data_dir = 'Z_data'
+agent_data_dir = 'agent_data_3A_baseline'
 
 if not os.path.exists(z_data_dir):
     os.makedirs(z_data_dir)
@@ -248,10 +249,37 @@ if __name__ == '__main__':
     for j in range(K):
             
         if j == 0:
+
+            agent1_x1 = []
+            agent2_x2 = []
+            agent3_x3 = []
+
+
+            with open(f'{agent_data_dir}/agent1_data.txt', 'r') as f1:
+                reader = csv.reader(f1)
+                next(reader)  # Skip header
+                for row in reader:
+                    agent1_x1.append(float(row[1]))
+                    rewards.append(float(row[2]))
+                    
+            with open(f'{agent_data_dir}/agent2_data.txt', 'r') as f2:
+                reader = csv.reader(f2)
+                next(reader)  # Skip header
+                for row in reader:
+                    agent2_x2.append(float(row[1]))
+                    
+            with open(f'{agent_data_dir}/agent3_data.txt', 'r') as f3:
+                reader = csv.reader(f3)
+                next(reader)  # Skip header
+                for row in reader:
+                    agent3_x3.append(float(row[1]))
+
+            X1 = np.array(agent1_x1)
+            X2 = np.array(agent2_x2)
+            X3 = np.array(agent3_x3)
+            R = np.array(rewards).reshape(-1,1)
             
-            # read initial data
-            R, X1, X2, X3 = load_z_data_temp(z_data_dir, j)
-            rewards = R
+                
             
         else:
             
@@ -261,6 +289,7 @@ if __name__ == '__main__':
 
         # Combine data to X
         X = np.vstack((X1, X2, X3)).T  
+        print(R)
 
         # 
         N, D = X.shape  # N = No samples, D = No Agents
