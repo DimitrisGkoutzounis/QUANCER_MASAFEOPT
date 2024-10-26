@@ -334,27 +334,9 @@ if __name__ == '__main__':
         Z2 = Z_opt[:,1]
         Z3 = Z_opt[:,2]
         
-        # Find the lowest value of Z_to_X models and store them in an array
-        Z_to_X_min_values = [
-            np.min(Z_to_X_0.X),
-            np.min(Z_to_X_1.X),
-            np.min(Z_to_X_2.X)
-        ]
-        
-        Z_to_X_max_values = [
-            np.max(Z_to_X_0.X),
-            np.max(Z_to_X_1.X),
-            np.max(Z_to_X_2.X)
-        ]
         
 
-        # Find the lowest value among them
-        min_value = np.min(Z_to_X_min_values)
-        max_value = np.max(Z_to_X_max_values)
-        print("Lowest value among Z_to_X models: ", min_value)
-        print("Max value among Z_to_X models: ", max_value)
-
-        K_bounds_Z = [(min_value,max_value)]
+        K_bounds_Z = [(0,15)]
         
         print(K_bounds_Z)
         
