@@ -279,6 +279,11 @@ if __name__ == '__main__':
             X3 = np.array(agent3_x3)
             R = np.array(rewards).reshape(-1,1)
             
+            print("X1",X1)
+            print("X2",X2)
+            print("X3",X3)
+            print("Rewards", rewards)
+            
                 
             
         else:
@@ -300,6 +305,7 @@ if __name__ == '__main__':
         # X ---> R mapping 
         model_X = GPy.models.GPRegression(X, R, GPy.kern.RBF(input_dim=D))
 
+        # ----------- Minimize the loss function ------------
 
         wait = input("Press Enter to minimize...")
         result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-3,'gtol':1e-3,'maxiter':100})
