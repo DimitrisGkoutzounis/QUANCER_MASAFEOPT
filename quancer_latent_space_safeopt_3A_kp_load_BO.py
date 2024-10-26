@@ -233,7 +233,7 @@ if not os.path.exists(z_data_dir):
 if __name__ == '__main__':
 
     K = 4 # Number of experiments
-    N = 50  # Number of BO trials
+    N = 25  # Number of BO trials
     
     # Delay difference between the agents
     td1 = 0.09
@@ -241,8 +241,8 @@ if __name__ == '__main__':
     td3 = 0.001 
     
     Kd1 = 0.3
-    Kd2 = 0.5
-    Kd3 = 0.6
+    Kd2 = 0.2
+    Kd3 = 0.1
     
     rewards = []
 
@@ -333,8 +333,10 @@ if __name__ == '__main__':
         Z1 = Z_opt[:,0]
         Z2 = Z_opt[:,1]
         Z3 = Z_opt[:,2]
-
-        K_bounds_Z = [(0, 10)]
+        
+        lb = np.min(Z_opt[:,0])
+        ub = np.max(Z_opt[:,0])
+        K_bounds_Z = [(lb, 30)]
 
         kernel1 = GPy.kern.RBF(1)
         kernel2 = GPy.kern.RBF(1)
@@ -346,7 +348,7 @@ if __name__ == '__main__':
         gp2 = GPy.models.GPRegression(Z2.reshape(-1,1), R, kernel2, noise_var=0.05**2)
         # Z3 ----> R mapping
         gp3 = GPy.models.GPRegression(Z3.reshape(-1,1), R, kernel3, noise_var=0.05**2)
-        parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, 1000)
+        parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, 100)
 
         # Agent safeopt objects
         opt1 = safeopt.SafeOpt(gp1, parameter_set, 0.03, beta=1.0, threshold=0.05)
@@ -373,9 +375,9 @@ if __name__ == '__main__':
             
             
             # Z --> X mapping
-            Kp1_next, _ = Z_to_X_0.predict(Z1_next[0].reshape(-1,1))
-            Kp2_next, _ = Z_to_X_1.predict(Z2_next[0].reshape(-1,1))
-            Kp3_next, _ = Z_to_X_2.predict(Z3_next[0].reshape(-1,1))
+            Kp1_next, _ = Z_to_X_0.predict_noiseless(Z1_next[0].reshape(-1,1))
+            Kp2_next, _ = Z_to_X_1.predict_noiseless(Z2_next[0].reshape(-1,1))
+            Kp3_next, _ = Z_to_X_2.predict_noiseless(Z3_next[0].reshape(-1,1))
             
             print(f"Kp1_next: {Kp1_next}")
             print(f"Kp2_next: {Kp2_next}")
@@ -402,7 +404,7 @@ if __name__ == '__main__':
             opt1.add_new_data_point(Z3_next,y)
 
 
-        write_z_data(z_data_dir,actions_1,actions_2,actions_3,reward_z, j)
+        write_z_data(z_data_dir,actions_1,actions_2,actions_3,reward_z, j+1)
         
         plt.figure()
         plt.plot(reward_z, label='Reward_Z')
