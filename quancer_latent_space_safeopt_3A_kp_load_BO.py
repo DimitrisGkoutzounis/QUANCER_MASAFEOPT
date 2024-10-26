@@ -317,8 +317,17 @@ if __name__ == '__main__':
         Z_to_X_2 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X[:, 2].reshape(-1,1), kernel=GPy.kern.RBF(1))
 
         Z_to_X_0.plot()
+        plt.title('Z1 --> X1')
+        plt.xlabel('Z1')
+        plt.ylabel('X1')
         Z_to_X_1.plot()
+        plt.title('Z2 --> X2')
+        plt.xlabel('Z2')
+        plt.ylabel('X2')
         Z_to_X_2.plot()
+        plt.title('Z3 --> X3')
+        plt.xlabel('Z3')
+        plt.ylabel('X3')
         plt.show()
 
         Z1 = Z_opt[:,0]
