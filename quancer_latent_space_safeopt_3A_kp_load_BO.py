@@ -334,9 +334,26 @@ if __name__ == '__main__':
         Z2 = Z_opt[:,1]
         Z3 = Z_opt[:,2]
         
-        lb = np.min(Z_opt[:,0])
-        ub = np.max(Z_opt[:,0])
-        K_bounds_Z = [(lb, 30)]
+        lb1 = np.min(Z_to_X_0.X)
+        lb2 = np.min(Z_to_X_1.X)
+        lb3 = np.min(Z_to_X_2.X)
+        
+        lbs = [lb1, lb2, lb3]
+        
+        up1 = np.max(Z_to_X_0.X)
+        up2 = np.max(Z_to_X_1.X)
+        up3 = np.max(Z_to_X_2.X)
+        
+        ups = [up1, up2, up3]
+        
+        lb_all = np.min(lbs)
+        up_all = np.max(ups)
+        
+        K_bounds_Z = [(lbs, ups)]
+        
+        print(K_bounds_Z)
+        
+        wait = input("Press Enter to continue...")
 
         kernel1 = GPy.kern.RBF(1)
         kernel2 = GPy.kern.RBF(1)
