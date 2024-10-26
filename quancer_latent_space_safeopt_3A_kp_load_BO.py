@@ -334,23 +334,27 @@ if __name__ == '__main__':
         Z2 = Z_opt[:,1]
         Z3 = Z_opt[:,2]
         
-        lb1 = np.min(Z_to_X_0.X).flatten()
-        lb2 = np.min(Z_to_X_1.X).flatten()
-        lb3 = np.min(Z_to_X_2.X).flatten()
+        # Find the lowest value of Z_to_X models and store them in an array
+        Z_to_X_min_values = [
+            np.min(Z_to_X_0.Y),
+            np.min(Z_to_X_1.Y),
+            np.min(Z_to_X_2.Y)
+        ]
         
-        lbs = np.array([lb1, lb2, lb3]).flatten()
+        Z_to_X_max_values = [
+            np.max(Z_to_X_0.Y),
+            np.max(Z_to_X_1.Y),
+            np.max(Z_to_X_2.Y)
+        ]
         
-        
-        up1 = np.max(Z_to_X_0.X).flatten()
-        up2 = np.max(Z_to_X_1.X).flatten()
-        up3 = np.max(Z_to_X_2.X).flatten()
-        
-        ups = np.array([up1, up2, up3]).flatten()
-        
-        lb_all = np.min(lbs).flatten()
-        up_all = np.max(ups).flatten()
-        
-        K_bounds_Z = [(lbs, ups)]
+
+        # Find the lowest value among them
+        lowest_value = np.min(Z_to_X_min_values)
+        max_value = np.max(Z_to_X_max_values)
+        print("Lowest value among Z_to_X models: ", lowest_value)
+        print("Max value among Z_to_X models: ", max_value)
+
+        K_bounds_Z = [(0.01), (10)]
         
         print(K_bounds_Z)
         
