@@ -202,7 +202,7 @@ def column_wise(Z_flat, X, D, N):
         diff1 = np.linalg.norm(X_d - mu_d)**2
         diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
-        action_term += 0 * diff1 + 1 * diff2
+        action_term += 1 * diff1 + 1 * diff2
 
         # Gradient-based alignment term
         grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
@@ -233,16 +233,16 @@ if not os.path.exists(z_data_dir):
 if __name__ == '__main__':
 
     K = 4 # Number of experiments
-    N = 25  # Number of BO trials
+    N = 50  # Number of BO trials
     
     # Delay difference between the agents
     td1 = 0.09
     td2 = 0.045  
     td3 = 0.001 
     
-    Kd1 = 0.3
-    Kd2 = 0.2
-    Kd3 = 0.1
+    Kd1 = 0.7
+    Kd2 = 0.7
+    Kd3 = 0.7
     
     rewards = []
 

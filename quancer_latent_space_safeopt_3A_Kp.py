@@ -196,7 +196,7 @@ class Agent:
         self.kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
         self.gp = GPy.models.GPRegression(self.x0, self.y0, self.kernel, noise_var=0.05**2)
 
-        self.parameter_set = safeopt.linearly_spaced_combinations(self.bounds, 100)
+        self.parameter_set = safeopt.linearly_spaced_combinations(self.bounds, 1000)
         self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.03, beta=1.0, threshold=0.05)
 
         self.kp_values = [safe_point]
@@ -240,13 +240,13 @@ subprocess.call(sys2dl, shell=True)
 subprocess.call(sys3dl, shell=True)  
 
 # Initial safepoint values.
-kp1_0 = 8
+kp1_0 = 1
 kd1_0 = 0.7
 
-kp2_0 = 6
+kp2_0 = 10
 kd2_0 = 0.7
 
-kp3_0 = 4  
+kp3_0 = 3 
 kd3_0 = 0.7
 
 x0_1 = [(kp1_0)]
@@ -348,7 +348,7 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
 
     return reward, os1, os2, os3
 
-N = 25  # Number of iterations
+N = 50  # Number of iterations
 
 # Initialize data files
 agent_data_dir = 'agent_data_3A'  
