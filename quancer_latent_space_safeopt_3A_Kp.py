@@ -240,14 +240,14 @@ subprocess.call(sys2dl, shell=True)
 subprocess.call(sys3dl, shell=True)  
 
 # Initial safepoint values.
-kp1_0 = 3
-kd1_0 = 0.3
+kp1_0 = 8
+kd1_0 = 0.7
 
-kp2_0 = 2
-kd2_0 = 0.2
+kp2_0 = 6
+kd2_0 = 0.7
 
-kp3_0 = 1  
-kd3_0 = 0.1
+kp3_0 = 4  
+kd3_0 = 0.7
 
 x0_1 = [(kp1_0)]
 x0_2 = [(kp2_0)]
@@ -313,9 +313,9 @@ agent1 = Agent(1, K_bounds, x0_1, reward_0)
 agent2 = Agent(2, K_bounds, x0_2, reward_0)
 agent3 = Agent(3, K_bounds, x0_3, reward_0) 
 
-Kd1 = 0.3
-Kd2 = 0.2
-Kd3 = 0.1 
+Kd1 = 0.7
+Kd2 = 0.7
+Kd3 = 0.7 
 
 # Quarc Experiment
 def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):

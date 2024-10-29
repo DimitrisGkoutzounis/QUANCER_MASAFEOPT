@@ -202,7 +202,7 @@ def column_wise(Z_flat, X, D, N):
         diff1 = np.linalg.norm(X_d - mu_d)**2
         diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
-        action_term += 1 * diff1 + 1 * diff2
+        action_term += 0 * diff1 + 1 * diff2
 
         # Gradient-based alignment term
         grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
@@ -307,13 +307,13 @@ if __name__ == '__main__':
         # ----------- Minimize the loss function ------------
 
         wait = input("Press Enter to minimize...")
-        result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-1,'gtol':1e-1,'maxiter':1})
+        result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-3,'gtol':1e-3,'maxiter':100})
         Z_opt = result.x.reshape(N, D)
                 
         # Z ---> X mapping
-        Z_to_X_0 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X[:,1].reshape(-1,1), kernel=GPy.kern.RBF(1))
-        Z_to_X_1 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), X[:,2].reshape(-1,1), kernel=GPy.kern.RBF(1))
-        Z_to_X_2 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X[:,3].reshape(-1,1), kernel=GPy.kern.RBF(1))
+        Z_to_X_0 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X[:,0].reshape(-1,1), kernel=GPy.kern.RBF(1))
+        Z_to_X_1 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), X[:,1].reshape(-1,1), kernel=GPy.kern.RBF(1))
+        Z_to_X_2 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X[:,2].reshape(-1,1), kernel=GPy.kern.RBF(1))
 
         Z_to_X_0.plot()
         plt.title('Z1 --> X1')
@@ -351,7 +351,9 @@ if __name__ == '__main__':
         gp2 = GPy.models.GPRegression(Z2.reshape(-1,1), R, kernel2, noise_var=0.05**2)
         # Z3 ----> R mapping
         gp3 = GPy.models.GPRegression(Z3.reshape(-1,1), R, kernel3, noise_var=0.05**2)
-        latent_parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, 1000)
+
+
+        latent_parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, 2*N)
 
         # Agent safeopt objects
         opt1 = safeopt.SafeOpt(gp1, latent_parameter_set, 0.03, beta=1.0, threshold=0.05)
@@ -385,6 +387,16 @@ if __name__ == '__main__':
             print(f"Kp1_next: {Kp1_next}")
             print(f"Kp2_next: {Kp2_next}")
             print(f"Kp3_next: {Kp3_next}")
+
+            if Kp1_next < 0:
+                print("Danger!!!!")
+                exit(0)
+            if Kp2_next < 0:
+                print("Danger!!!!")
+                exit(0)
+            if Kp3_next < 0:
+                print("Danger!!!!")
+                exit(0)
             
             Kp1_next = np.asarray([Kp1_next]).flatten()
             Kp2_next = np.asarray([Kp2_next]).flatten()
@@ -409,7 +421,10 @@ if __name__ == '__main__':
             opt1.plot(100)
             opt2.plot(100)
             opt3.plot(100)
+
             plt.savefig(f'{z_data_dir}/safeopt_{iteration}.png')
+            plt.close('all')
+            
 
 
         write_z_data(z_data_dir,actions_1,actions_2,actions_3,reward_z, j+1)

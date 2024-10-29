@@ -205,7 +205,7 @@ def column_wise(Z_flat, X, D, N):
         diff1 = np.linalg.norm(X_d - mu_d)**2
         diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
-        action_term += 1 * diff1 + 0.2 * diff2
+        action_term += 0 * diff1 + 0 * diff2
 
         # Gradient-based alignment term
         grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
@@ -310,7 +310,7 @@ if __name__ == '__main__':
         # ----------- Minimize the loss function ------------
 
         wait = input("Press Enter to minimize...")
-        result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-2,'gtol':1e-2,'maxiter':1})
+        result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-2,'gtol':1e-2,'maxiter':100})
         Z_opt = result.x.reshape(N, D)
                 
         # Z ---> X mapping
@@ -418,20 +418,26 @@ if __name__ == '__main__':
             Z2_next = opt1.optimize()
             Z3_next = opt1.optimize()
             
-            Kp1_next = reg1.predict(Z1_next)
-            Kp2_next = reg2.predict(Z2_next)
-            Kp3_next = reg3.predict(Z3_next)
+            Kp1_next = reg1.predict(Z1_next.reshape(-1,1))
+            Kp2_next = reg2.predict(Z2_next.reshape(-1,1))
+            Kp3_next = reg3.predict(Z3_next.reshape(-1,1))
             
             print("Predicted Kp values")    
             print(f"Kp1_next: {Kp1_next}")
             print(f"Kp2_next: {Kp2_next}")
             print(f"Kp3_next: {Kp3_next}")
             
-            if Kp1_next or Kp2_next or Kp3_next < 0:
-                Kp1_next = 0
-                Kp2_next = 0
-                Kp3_next = 0
-                print("Negative values detected")
+            if Kp1_next < 0:
+                print("Danger!!!!")
+                exit(0)
+            if Kp2_next < 0:
+                print("Danger!!!!")
+                exit(0)
+            if Kp3_next < 0:
+                print("Danger!!!!")
+                exit(0)
+            
+            
             
             Kp1_next = np.asarray([Kp1_next]).flatten()
             Kp2_next = np.asarray([Kp2_next]).flatten()
