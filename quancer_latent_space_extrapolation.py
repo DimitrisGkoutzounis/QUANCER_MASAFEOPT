@@ -217,28 +217,24 @@ def column_wise(Z_flat, X, D, N):
     U_z = np.zeros((N, D))
     U_x = np.zeros((N, D))
     
-    mu_z, _ = Z_to_X.predict_noiseless(Z)
+    mu_z, _ = Z_to_X.predict_noiseless(Z) 
     
     diff1 = np.linalg.norm(X - mu_z)**2
-    
-    
 
     for d in range(D):
         X_d = np.zeros_like(X)
         X_d[:, d] = X[:, d]
         
-        model_d = GPy.models.GPRegression(Z, X_d,GPy.kern.RBF(D))
-        mu_d, _ = model_d.predict_noiseless(Z)
+        Zd_to_Xd = GPy.models.GPRegression(Z, X_d,GPy.kern.RBF(D))
+        mu_d, _ = Zd_to_Xd.predict_noiseless(Z)
         
-
-        diff1 = np.linalg.norm(X_d - mu_d)**2
-        diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
+        diff2 = np.linalg.norm(mu_d - mu_z[:, [d]])**2
         
-        action_term += 1 * diff1 + 1 * diff2
+        action_term += w1 * diff1 + w2 * diff2
 
         # Gradient-based alignment term
-        grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
-        grad_R_X = compute_gradient(model_X, X).reshape(N, D)
+        grad_R_Z = compute_gradient(Z_to_R, Z).reshape(N, D)
+        grad_R_X = compute_gradient(X_to_R, X).reshape(N, D)
 
         grad_R_Z_norm_column.append(np.linalg.norm(grad_R_Z[:, d]))
         grad_R_X_norm_column.append(np.linalg.norm(grad_R_X[:, d]))
@@ -249,7 +245,7 @@ def column_wise(Z_flat, X, D, N):
     dot_product_matrix = np.dot(U_z.T, U_x)
     diag_penalty = np.linalg.norm((1 - np.diag(dot_product_matrix))**2)/D
     
-    total_loss = action_term + 1 * diag_penalty
+    total_loss = action_term + w3 * diag_penalty
     print(total_loss) 
 
 
@@ -287,6 +283,10 @@ if __name__ == '__main__':
     beta = 1.0
     safety_threshold = 0.03
     discretization = 1000
+    
+    w1 = 1
+    w2 = 1
+    w3 = 1
     
     K = 4 # Number of experiments
     N = 50  # Number of BO trials
@@ -369,7 +369,7 @@ if __name__ == '__main__':
         Z = np.random.uniform(0, 1, (N, D))
 
         # X ---> R mapping 
-        model_X = GPy.models.GPRegression(X, R, GPy.kern.RBF(input_dim=D))
+        X_to_R = GPy.models.GPRegression(X, R, GPy.kern.RBF(input_dim=D))
 
         # ----------- Minimize the loss function ------------
 
