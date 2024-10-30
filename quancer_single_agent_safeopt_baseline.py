@@ -161,10 +161,8 @@ kd2_0 = 0.5
 kp3_0 = 6  
 kd3_0 = 0.8
 
+x0 = [(kp1_0, kd1_0), (kp2_0, kd2_0), (kp3_0, kd3_0)]
 
-x0_1 = (kp1_0, kd1_0)
-x0_2 = (kp2_0, kd2_0)
-x0_3 = (kp3_0, kd3_0) 
 
 # Delay difference between the agents
 td1 = 0.09
@@ -248,11 +246,11 @@ class Agent:
         self.rewards.append(y_meas)
 
 # Kp bounds
-K_bounds = [(0.01, 10), (0.01, 1)]
+K_bounds = [(0.01, 10), (0.01, 1), (0.01, 10), (0.01, 1), (0.01, 10), (0.01, 1)]
 
-agent1 = Agent(1, K_bounds, x0_1, reward_0)
-agent2 = Agent(2, K_bounds, x0_2, reward_0)
-agent3 = Agent(3, K_bounds, x0_3, reward_0)  
+agent1 = Agent(1, K_bounds, x0, reward_0)
+
+wait = input("Press Enter to start Bayesian Optimization for Agent 1...")
 
 # Quarc Experiment
 def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
@@ -297,9 +295,9 @@ with open(f'{agent_data_dir}/agent1_data.txt', 'w', newline='') as f1, \
     writer1.writerow(['Iteration', 'Kp', 'Kd', 'Reward'])
     writer2.writerow(['Iteration', 'Kp', 'Kd', 'Reward'])
     writer3.writerow(['Iteration', 'Kp', 'Kd', 'Reward'])  
-    writer1.writerow([0, x0_1[0], x0_1[1], reward_0])
-    writer2.writerow([0, x0_2[0], x0_2[1], reward_0])
-    writer3.writerow([0, x0_3[0], x0_3[1], reward_0]) 
+    writer1.writerow([0, x0[0], x0[1], reward_0])
+    writer2.writerow([0, x0[2], x0[3], reward_0])
+    writer3.writerow([0, x0[4], x0[5], reward_0]) 
 
 with open(f'{agent_data_dir}/rewards.txt', 'w') as f:
     f.write('Iteration,Reward\n')
@@ -310,20 +308,21 @@ for iteration in range(1, N+1):
     
     # Get next Kp values from agents
     K1_next = agent1.optimize()
-    K2_next = agent2.optimize()
-    K3_next = agent3.optimize() 
+    
+    print(K1_next)
+    
+    wait = input("Press Enter to run the experiment...")
+    
 
-    print(f"Iteration {iteration}, Agent 1:  -Kp {K1_next[0]} -Kd {K1_next[1]}, Agent 2: -Kp {K2_next[0]} -Kd {K2_next[1]}, Agent 3: -Kp {K3_next[0]} -Kd {K3_next[1]}")
+    print(f"Iteration {iteration}, Agent 1:  -Kp {K1_next[0]} -Kd {K1_next[1]}, Agent 2: -Kp {K1_next[2]} -Kd {K1_next[3]}, Agent 3: -Kp {K1_next[4]} -Kd {K1_next[5]}")
 
     # Run the experiment with kp1_next, kp2_next, kp3_next
-    y, os1, os2, os3 = run_experiment(K1_next[0], K1_next[1], K2_next[0], K2_next[1], K3_next[0], K3_next[1], iteration)
+    y, os1, os2, os3 = run_experiment(K1_next[0], K1_next[1], K1_next[2], K1_next[3], K1_next[4], K1_next[5], iteration)
 
     print(f"Reward: {y}")
     
     # Update agents with observations
     agent1.update(K1_next, y)
-    agent2.update(K2_next, y)
-    agent3.update(K3_next, y)  
     
     # Save agent's data to text files
     with open(f'{agent_data_dir}/agent1_data.txt', 'a', newline='') as f1, \
@@ -333,43 +332,16 @@ for iteration in range(1, N+1):
         writer2 = csv.writer(f2)
         writer3 = csv.writer(f3) 
         writer1.writerow([iteration, K1_next[0], K1_next[1], y])
-        writer2.writerow([iteration, K2_next[0], K2_next[1], y])
-        writer3.writerow([iteration, K3_next[0], K3_next[1], y])  
+        writer2.writerow([iteration, K1_next[2], K1_next[3], y])
+        writer3.writerow([iteration, K1_next[4], K1_next[5], y])  
 
     # Save rewards to a text file
     with open(f'{agent_data_dir}/rewards.txt', 'a') as f:
         f.write(f"{iteration},{y}\n")
 
     # Plot and save agents' opt plots in one figure with three subplots
-    x_max_1, y_max_1 = agent1.opt.get_maximum()
-    x_max_2, y_max_2 = agent2.opt.get_maximum()
-    x_max_3, y_max_3 = agent3.opt.get_maximum()  
+    x_max_1, y_max_1 = agent1.opt.get_maximum() 
 
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6))  
-
-    # Agent 1 plot
-    agent1.opt.plot(100, axes[0])
-    axes[0].scatter(x_max_1[0], x_max_1[1], marker="*", color='red', s=100, label='Current Maximum')
-    axes[0].set_title(f'Agent 1 - Iteration {iteration}')
-    axes[0].set_xlabel('Kp')
-    axes[0].set_ylabel('Kd')
-    axes[0].legend()
-
-    # Agent 2 plot
-    agent2.opt.plot(100, axes[1])
-    axes[1].scatter(x_max_2[0], x_max_2[1], marker="*", color='red', s=100, label='Current Maximum')
-    axes[1].set_title(f'Agent 2 - Iteration {iteration}')
-    axes[1].set_xlabel('Kp')
-    axes[1].set_ylabel('Kd')
-    axes[1].legend()
-
-    # Agent 3 plot
-    agent3.opt.plot(100, axes[2])
-    axes[2].scatter(x_max_3[0], x_max_3[1], marker="*", color='red', s=100, label='Current Maximum')
-    axes[2].set_title(f'Agent 3 - Iteration {iteration}')
-    axes[2].set_xlabel('Kp')
-    axes[2].set_ylabel('Kd')
-    axes[2].legend()
 
     plt.tight_layout()
     plt.savefig(f'plots_3A/agents_iteration_{iteration}.png')  
@@ -398,8 +370,7 @@ max_reward_index = rewards.index(max_reward)
 best_iteration = iterations_list[max_reward_index]
 print(f'Best Experimental Iteration: {best_iteration} | Reward - {max_reward}')
 print(f'Agent 1 Kp, Kd: {agent1.kp_values[best_iteration]}')
-print(f'Agent 2 Kp, Kd: {agent2.kp_values[best_iteration]}')
-print(f'Agent 3 Kp, Kd: {agent3.kp_values[best_iteration]}') 
+
 
 # Plot Kp values over iterations
 iterations = np.arange(0, N+1)
