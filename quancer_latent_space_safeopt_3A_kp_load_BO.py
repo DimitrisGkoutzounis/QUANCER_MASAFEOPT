@@ -353,7 +353,7 @@ if __name__ == '__main__':
         gp3 = GPy.models.GPRegression(Z3.reshape(-1,1), R, kernel3, noise_var=0.05**2)
 
 
-        latent_parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, 2*N)
+        latent_parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, 1000)
 
         # Agent safeopt objects
         opt1 = safeopt.SafeOpt(gp1, latent_parameter_set, 0.03, beta=1.0, threshold=0.05)
