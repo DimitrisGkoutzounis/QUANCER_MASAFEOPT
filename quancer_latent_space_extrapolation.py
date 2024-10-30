@@ -252,7 +252,6 @@ def column_wise(Z_flat, X, D, N):
     return total_loss
 
 
-
 z_data_dir = 'Z_data'
 baseline_dir = 'agent_data_3A_baseline'
 
@@ -284,10 +283,6 @@ if __name__ == '__main__':
     beta = 1.0
     safety_threshold = 0.03
     discretization = 1000
-    
-    w1 = 1
-    w2 = 1
-    w3 = 1
     
     K = 4 # Number of experiments
     N = 50  # Number of BO trials
@@ -323,12 +318,11 @@ if __name__ == '__main__':
             print("X2",X2)
             print("X3",X3)
             
-            
             kernel1 = GPy.kern.RBF(1)
             kernel2 = GPy.kern.RBF(1)
             kernel3 = GPy.kern.RBF(1)
             
-            K_bounds_Z = [(0,10)]
+            bounds = [(0, 10)]
 
             # Z1 ----> R mapping
             gp1 = GPy.models.GPRegression(X1.reshape(-1,1), R, kernel1, noise_var=0.05**2)
@@ -337,7 +331,8 @@ if __name__ == '__main__':
             # Z3 ----> R mapping
             gp3 = GPy.models.GPRegression(X3.reshape(-1,1), R, kernel3, noise_var=0.05**2)
 
-            latent_parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, discretization)
+
+            latent_parameter_set = safeopt.linearly_spaced_combinations(bounds, discretization)
 
             # Agent safeopt objects
             opt1 = safeopt.SafeOpt(gp1, latent_parameter_set, safety_threshold, beta, threshold=0.05)
@@ -348,8 +343,6 @@ if __name__ == '__main__':
             opt2.plot(100)
             opt3.plot(100)
             plt.show()
-            
-            
                 
             
         else:
@@ -370,50 +363,9 @@ if __name__ == '__main__':
         Z = np.random.uniform(0, 1, (N, D))
 
         # X ---> R mapping 
-        X_to_R = GPy.models.GPRegression(X, R, GPy.kern.RBF(input_dim=D))
-
-        # ----------- Minimize the loss function ------------
-        
-        param_set_X = opt1.parameter_set.reshape(-1,1)
-        latent_set_Z = safeopt.linearly_spaced_combinations(K_bounds_Z, discretization).reshape(-1,1)
-        
-        param_Z_to_param_X = GPy.models.GPRegression(latent_set_Z, param_set_X, GPy.kern.RBF(1))
-        Mu_z, _ = param_Z_to_param_X.predict_noiseless(Z)
-        
-        param_Z_to_param_X.plot()
-        plt.show()
-
-        
-        # ----- Finding the closest Z value for each X -----
-        z_values_list = []
-        for d in range(D):
-            X_d = np.zeros_like(X)
-            X_d[:,d] = X[:,d]
-            
-            z_values = np.zeros(N)
-            for n in range(N):
-                # Compute absolute differences between param_set_X and X_d[n, d]
-                diffs = np.abs(param_set_X.flatten() - X_d[n, d])
-                # Find the index of the minimum difference
-                min_index = np.argmin(diffs)
-                # Retrieve the corresponding latent Z value
-                z_value = latent_set_Z[min_index]
-                z_values[n] = z_value
-                
-                print(f'For X_d[{n}, {d}] = {X_d[n, d]}, closest z_value = {z_value[0]}')
-            
-            z_values_list.append(z_values)  
-            
-            
-        z_values_array = np.array(z_values_list).T
-        print(z_values_array[:,0])
-        print(z_values_array[:,1])
-        print(z_values_array[:,2])
-        
-        Z = z_values_array
-        
         model_X = GPy.models.GPRegression(X, R, GPy.kern.RBF(input_dim=D))
 
+        # ----------- Minimize the loss function ------------
 
         wait = input("Press Enter to minimize...")
         result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-3,'gtol':1e-3,'maxiter':100})
