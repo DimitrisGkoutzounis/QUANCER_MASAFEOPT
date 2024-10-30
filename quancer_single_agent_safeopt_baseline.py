@@ -15,6 +15,7 @@ import safeopt
 import GPy
 from scipy.optimize import minimize
 from plot_iteration_3A import plot_iteration
+from safeopt import SafeOptSwarm
 
 ################ PHASE 1 ################
 
@@ -229,9 +230,10 @@ class Agent:
         self.kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
         self.gp = GPy.models.GPRegression(self.x0, self.y0, self.kernel, noise_var=0.05**2)
 
-        self.parameter_set = safeopt.linearly_spaced_combinations(self.bounds, 100)
-        self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.03, beta=1.0, threshold=0.05)
+        # self.parameter_set = safeopt.linearly_spaced_combinations(self.bounds, 100)
+        # self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.03, beta=1.0, threshold=0.05)
 
+        self.opt = SafeOptSwarm(self.gp, 0.03, self.bounds, beta=1.0, threshold=0.05)
         self.kp_values = [safe_point]
         self.rewards = [initial_reward]
 
