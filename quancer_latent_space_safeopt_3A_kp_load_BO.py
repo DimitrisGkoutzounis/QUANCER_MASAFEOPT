@@ -9,11 +9,12 @@ import shutil
 import matplotlib.pyplot as plt
 from scipy.io import loadmat
 import numpy as np
-import os  # For directory operations
-import csv  # For writing and reading CSV files
+import os  
+import csv  
 import safeopt
 import GPy
 from scipy.optimize import minimize
+from datetime import datetime
 from plot_iteration_3A import plot_iteration
 
 modelName = 'servoPDF'
@@ -129,6 +130,33 @@ def load_z_data_temp(z_data_dir,iteration):
 
             return rewards, agent1_x1, agent2_x2, agent3_x3 
 
+def load_initial_data(baseline_dir):
+                agent1_x1 = []
+                agent2_x2 = []
+                agent3_x3 = []
+                rewards = []
+
+                with open(f'{baseline_dir}/agent1_data.txt', 'r') as f1:
+                    reader = csv.reader(f1)
+                    next(reader)  # Skip header
+                    for row in reader:
+                        agent1_x1.append(float(row[1]))
+                        rewards.append(float(row[2]))
+
+                with open(f'{baseline_dir}/agent2_data.txt', 'r') as f2:
+                    reader = csv.reader(f2)
+                    next(reader)  # Skip header
+                    for row in reader:
+                        agent2_x2.append(float(row[1]))
+
+                with open(f'{baseline_dir}/agent3_data.txt', 'r') as f3:
+                    reader = csv.reader(f3)
+                    next(reader)  # Skip header
+                    for row in reader:
+                        agent3_x3.append(float(row[1]))
+
+                return agent1_x1, agent2_x2, agent3_x3, rewards
+
 def write_z_data(z_data_dir,X1,X2,X3,R_z, iteration):
     
     with open(f'{z_data_dir}/Z_temp_data_{iteration}.txt', 'w', newline='') as f:
@@ -225,13 +253,35 @@ def column_wise(Z_flat, X, D, N):
 
 
 z_data_dir = 'Z_data'
-agent_data_dir = 'agent_data_3A_baseline'
+baseline_dir = 'agent_data_3A_baseline'
 
 if not os.path.exists(z_data_dir):
     os.makedirs(z_data_dir)
 
 if __name__ == '__main__':
-
+    
+    today = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    base_dir = f'latent_experiment_{today}'
+    os.makedirs(base_dir, exist_ok=True)
+    
+    # Create subdirectories
+    
+    plots_dir = os.path.join(base_dir, 'plots')
+    os.makedirs(plots_dir, exist_ok=True)
+    
+    agent_data_dir = os.path.join(base_dir, 'agent_data')
+    os.makedirs(agent_data_dir, exist_ok=True)
+    
+    z_data_dir = os.path.join(base_dir, 'z_data')
+    os.makedirs(z_data_dir, exist_ok=True)
+    
+    # ----- Configuration -----
+    
+    K_bounds_Z = [(-10,10)]
+    beta = 1.0
+    safety_threshold = 0.03
+    discretization = 1000
+    
     K = 4 # Number of experiments
     N = 50  # Number of BO trials
     
@@ -254,35 +304,17 @@ if __name__ == '__main__':
             agent2_x2 = []
             agent3_x3 = []
 
-
-            with open(f'{agent_data_dir}/agent1_data.txt', 'r') as f1:
-                reader = csv.reader(f1)
-                next(reader)  # Skip header
-                for row in reader:
-                    agent1_x1.append(float(row[1]))
-                    rewards.append(float(row[2]))
-                    
-            with open(f'{agent_data_dir}/agent2_data.txt', 'r') as f2:
-                reader = csv.reader(f2)
-                next(reader)  # Skip header
-                for row in reader:
-                    agent2_x2.append(float(row[1]))
-                    
-            with open(f'{agent_data_dir}/agent3_data.txt', 'r') as f3:
-                reader = csv.reader(f3)
-                next(reader)  # Skip header
-                for row in reader:
-                    agent3_x3.append(float(row[1]))
+            agent1_x1, agent2_x2, agent3_x3, rewards = load_initial_data(baseline_dir)
 
             X1 = np.array(agent1_x1)
             X2 = np.array(agent2_x2)
             X3 = np.array(agent3_x3)
             R = np.array(rewards).reshape(-1,1)
             
+            print("Printing initial data..\n")
             print("X1",X1)
             print("X2",X2)
             print("X3",X3)
-            
                 
             
         else:
@@ -291,6 +323,7 @@ if __name__ == '__main__':
             R, X1, X2, X3 = load_z_data_temp(z_data_dir, j)
 
 
+        # ------ Simulate Communication ------
         # Combine data to X
         X = np.vstack((X1, X2, X3)).T  
         print(R)
@@ -327,20 +360,18 @@ if __name__ == '__main__':
         plt.title('Z3 --> X3')
         plt.xlabel('Z3')
         plt.ylabel('X3')
+        plt.savefig(os.path.join(plots_dir, f'Z_to_X_mapping_{j+1}.png'))
         plt.show()
+        
+        
+        # ------ Communication Complete ------
 
         Z1 = Z_opt[:,0]
         Z2 = Z_opt[:,1]
         Z3 = Z_opt[:,2]
         
         
-
-        K_bounds_Z = [(-10,10)]
         
-        print(K_bounds_Z)
-        
-        wait = input("Press Enter to continue...")
-
         kernel1 = GPy.kern.RBF(1)
         kernel2 = GPy.kern.RBF(1)
         kernel3 = GPy.kern.RBF(1)
@@ -353,21 +384,21 @@ if __name__ == '__main__':
         gp3 = GPy.models.GPRegression(Z3.reshape(-1,1), R, kernel3, noise_var=0.05**2)
 
 
-        latent_parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, 1000)
+        latent_parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, discretization)
 
         # Agent safeopt objects
-        opt1 = safeopt.SafeOpt(gp1, latent_parameter_set, 0.03, beta=1.0, threshold=0.05)
-        opt2 = safeopt.SafeOpt(gp2, latent_parameter_set, 0.03, beta=1.0, threshold=0.05)
-        opt3 = safeopt.SafeOpt(gp3, latent_parameter_set, 0.03, beta=1.0, threshold=0.05)
+        opt1 = safeopt.SafeOpt(gp1, latent_parameter_set, safety_threshold, beta, threshold=0.05)
+        opt2 = safeopt.SafeOpt(gp2, latent_parameter_set, safety_threshold, beta, threshold=0.05)
+        opt3 = safeopt.SafeOpt(gp3, latent_parameter_set, safety_threshold, beta, threshold=0.05)
 
         print("Agents initialized...")
 
-        actions_1 = []
-        actions_2 = []
-        actions_3 = []
+        actions_1_log = []
+        actions_2_log = []
+        actions_3_log = []
+        reward_z_log = []
 
         wait = input("Press enter to start BO")
-        reward_z = []
 
         # Bayesian Optimization in the latent space
         for iteration in range(N):
@@ -402,45 +433,61 @@ if __name__ == '__main__':
             Kp2_next = np.asarray([Kp2_next]).flatten()
             Kp3_next = np.asarray([Kp3_next]).flatten()
             
-            actions_1 = np.append(actions_1, Kp1_next)
-            actions_2 = np.append(actions_2, Kp2_next)
-            actions_3 = np.append(actions_3, Kp3_next)
+            actions_1_log = np.append(actions_1_log, Kp1_next)
+            actions_2_log = np.append(actions_2_log, Kp2_next)
+            actions_3_log = np.append(actions_3_log, Kp3_next)
             
             # Run the experiment with the mapped Kp and Kd values
             y, os1, os2, os3 = run_experiment(Kp1_next[0], Kd1, Kp2_next[0], Kd2, Kp3_next[0], Kd3, iteration)
 
             print(f"Reward: {y}")
             
-            reward_z.append(y)
+            reward_z_log.append(y)
 
             # Update agents with observations
             opt1.add_new_data_point(Z1_next,y)
             opt1.add_new_data_point(Z2_next,y)
             opt1.add_new_data_point(Z3_next,y)
             
-            opt1.plot(100)
-            opt2.plot(100)
-            opt3.plot(100)
-
-            plt.savefig(f'{z_data_dir}/safeopt_{iteration}.png')
-            plt.close('all')
+            x_max_1, y_max_1 = opt1.get_maximum()
+            x_max_2, y_max_2 = opt2.get_maximum()
+            x_max_3, y_max_3 = opt3.get_maximum()  
             
+            fig, axes = plt.subplots(1, 3, figsize=(18, 6))  
 
+            # Agent 1 plot
+            opt1.plot(100, axes[0])
+            axes[0].scatter(x_max_1[0],y_max_1, marker="*", color='red', s=100, label='Current Maximum')
+            axes[0].set_title(f'Agent 1 - Iteration {iteration}')
+            axes[0].set_xlabel('Kp')
+            axes[0].set_ylabel('Reward')
+            axes[0].legend()
 
-        write_z_data(z_data_dir,actions_1,actions_2,actions_3,reward_z, j+1)
+            # Agent 2 plot
+            opt2.plot(100, axes[1])
+            axes[1].scatter(x_max_2[0],y_max_2, marker="*", color='red', s=100, label='Current Maximum')
+            axes[1].set_title(f'Agent 2 - Iteration {iteration}')
+            axes[1].set_xlabel('Kp')
+            axes[1].set_ylabel('Reward')
+            axes[1].legend()
+
+            # Agent 3 plot
+            opt3.plot(100, axes[2])
+            axes[2].scatter(x_max_3[0],y_max_3, marker="*", color='red', s=100, label='Current Maximum')
+            axes[2].set_title(f'Agent 3 - Iteration {iteration}')
+            axes[2].set_xlabel('Kp')
+            axes[2].set_ylabel('Reward')
+            axes[2].legend()
+
+            plt.tight_layout()
+            plt.savefig(os.path.join(plots_dir, 'safeopt_{iteration}.png'))  
+            plt.close()
+            
+        
+        write_z_data(z_data_dir,actions_1_log,actions_2_log,actions_3_log,reward_z_log, j+1)
         
         plt.figure()
-        plt.plot(reward_z, label='Reward_Z')
+        plt.plot(reward_z_log, label='Reward_Z')
         plt.plot(rewards, label='Reward_X')
-        plt.savefig(f'{z_data_dir}/reward_{j}.png')
-        plt.legend()
+        plt.savefig(os.path.join(plots_dir, f'reward_comparison_{j+1}.png'))
         plt.show()
-
-        x_max_1, y_max_1 = opt1.get_maximum()
-        x_max_2, y_max_2 = opt2.get_maximum()
-        x_max_3, y_max_3 = opt3.get_maximum()
-        
-        print(f"Maximum for agent 1: {x_max_1}, {y_max_1}")
-        print(f"Maximum for agent 2: {x_max_2}, {y_max_2}")
-        print(f"Maximum for agent 3: {x_max_3}, {y_max_3}")
-        
