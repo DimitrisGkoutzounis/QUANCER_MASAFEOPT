@@ -203,8 +203,9 @@ def column_wise(Z_flat, X, D, N):
     Z = Z_flat.reshape(N, D)
 
     # Define model_Z with R_z as observations
-    Z_to_R = GPy.models.GPRegression(Z, R.reshape(-1,1), GPy.kern.RBF(D))
-    Z_to_X = GPy.models.GPRegression(Z, X,  GPy.kern.RBF(D))
+    model_Z = GPy.models.GPRegression(Z, R.reshape(-1,1), GPy.kern.RBF(D))
+    model_all = GPy.models.GPRegression(Z, X,  GPy.kern.RBF(D))
+    mu_all, _ = model_all.predict_noiseless(Z)
 
     loss = 0.0
     action_term = 0.0
@@ -217,24 +218,23 @@ def column_wise(Z_flat, X, D, N):
     U_z = np.zeros((N, D))
     U_x = np.zeros((N, D))
     
-    mu_z, _ = Z_to_X.predict_noiseless(Z) 
-    
-    diff1 = np.linalg.norm(X - mu_z)**2
 
     for d in range(D):
         X_d = np.zeros_like(X)
         X_d[:, d] = X[:, d]
         
-        Zd_to_Xd = GPy.models.GPRegression(Z, X_d,GPy.kern.RBF(D))
-        mu_d, _ = Zd_to_Xd.predict_noiseless(Z)
+        model_d = GPy.models.GPRegression(Z, X_d,GPy.kern.RBF(D))
+        mu_d, _ = model_d.predict_noiseless(Z)
         
-        diff2 = np.linalg.norm(mu_d - mu_z[:, [d]])**2
+
+        diff1 = np.linalg.norm(X_d - mu_d)**2
+        diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
-        action_term += w1 * diff1 + w2 * diff2
+        action_term += 1 * diff1 + 1 * diff2
 
         # Gradient-based alignment term
-        grad_R_Z = compute_gradient(Z_to_R, Z).reshape(N, D)
-        grad_R_X = compute_gradient(X_to_R, X).reshape(N, D)
+        grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
+        grad_R_X = compute_gradient(model_X, X).reshape(N, D)
 
         grad_R_Z_norm_column.append(np.linalg.norm(grad_R_Z[:, d]))
         grad_R_X_norm_column.append(np.linalg.norm(grad_R_X[:, d]))
@@ -245,11 +245,12 @@ def column_wise(Z_flat, X, D, N):
     dot_product_matrix = np.dot(U_z.T, U_x)
     diag_penalty = np.linalg.norm((1 - np.diag(dot_product_matrix))**2)/D
     
-    total_loss = action_term + w3 * diag_penalty
+    total_loss = action_term + 1 * diag_penalty
     print(total_loss) 
 
 
     return total_loss
+
 
 
 z_data_dir = 'Z_data'
@@ -372,6 +373,47 @@ if __name__ == '__main__':
         X_to_R = GPy.models.GPRegression(X, R, GPy.kern.RBF(input_dim=D))
 
         # ----------- Minimize the loss function ------------
+        
+        param_set_X = opt1.parameter_set.reshape(-1,1)
+        latent_set_Z = safeopt.linearly_spaced_combinations(K_bounds_Z, discretization).reshape(-1,1)
+        
+        param_Z_to_param_X = GPy.models.GPRegression(latent_set_Z, param_set_X, GPy.kern.RBF(1))
+        Mu_z, _ = param_Z_to_param_X.predict_noiseless(Z)
+        
+        param_Z_to_param_X.plot()
+        plt.show()
+
+        
+        # ----- Finding the closest Z value for each X -----
+        z_values_list = []
+        for d in range(D):
+            X_d = np.zeros_like(X)
+            X_d[:,d] = X[:,d]
+            
+            z_values = np.zeros(N)
+            for n in range(N):
+                # Compute absolute differences between param_set_X and X_d[n, d]
+                diffs = np.abs(param_set_X.flatten() - X_d[n, d])
+                # Find the index of the minimum difference
+                min_index = np.argmin(diffs)
+                # Retrieve the corresponding latent Z value
+                z_value = latent_set_Z[min_index]
+                z_values[n] = z_value
+                
+                print(f'For X_d[{n}, {d}] = {X_d[n, d]}, closest z_value = {z_value[0]}')
+            
+            z_values_list.append(z_values)  
+            
+            
+        z_values_array = np.array(z_values_list).T
+        print(z_values_array[:,0])
+        print(z_values_array[:,1])
+        print(z_values_array[:,2])
+        
+        Z = z_values_array
+        
+        model_X = GPy.models.GPRegression(X, R, GPy.kern.RBF(input_dim=D))
+
 
         wait = input("Press Enter to minimize...")
         result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-3,'gtol':1e-3,'maxiter':100})
