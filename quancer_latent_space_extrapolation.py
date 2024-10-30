@@ -203,9 +203,8 @@ def column_wise(Z_flat, X, D, N):
     Z = Z_flat.reshape(N, D)
 
     # Define model_Z with R_z as observations
-    model_Z = GPy.models.GPRegression(Z, R.reshape(-1,1), GPy.kern.RBF(D))
-    model_all = GPy.models.GPRegression(Z, X,  GPy.kern.RBF(D))
-    mu_all, _ = model_all.predict_noiseless(Z)
+    Z_to_R = GPy.models.GPRegression(Z, R.reshape(-1,1), GPy.kern.RBF(D))
+    Z_to_X = GPy.models.GPRegression(Z, X,  GPy.kern.RBF(D))
 
     loss = 0.0
     action_term = 0.0
@@ -217,6 +216,11 @@ def column_wise(Z_flat, X, D, N):
     # Initialize matrices for U_z and U_x
     U_z = np.zeros((N, D))
     U_x = np.zeros((N, D))
+    
+    mu_z, _ = Z_to_X.predict_noiseless(Z)
+    
+    diff1 = np.linalg.norm(X - mu_z)**2
+    
     
 
     for d in range(D):
@@ -261,6 +265,8 @@ if not os.path.exists(z_data_dir):
 if __name__ == '__main__':
     
     today = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    
+    
     base_dir = f'latent_experiment_{today}'
     os.makedirs(base_dir, exist_ok=True)
     
@@ -315,6 +321,34 @@ if __name__ == '__main__':
             print("X1",X1)
             print("X2",X2)
             print("X3",X3)
+            
+            
+            kernel1 = GPy.kern.RBF(1)
+            kernel2 = GPy.kern.RBF(1)
+            kernel3 = GPy.kern.RBF(1)
+            
+            K_bounds_Z = [(0,10)]
+
+            # Z1 ----> R mapping
+            gp1 = GPy.models.GPRegression(X1.reshape(-1,1), R, kernel1, noise_var=0.05**2)
+            # Z2 ----> R mapping
+            gp2 = GPy.models.GPRegression(X2.reshape(-1,1), R, kernel2, noise_var=0.05**2)
+            # Z3 ----> R mapping
+            gp3 = GPy.models.GPRegression(X3.reshape(-1,1), R, kernel3, noise_var=0.05**2)
+
+            latent_parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, discretization)
+
+            # Agent safeopt objects
+            opt1 = safeopt.SafeOpt(gp1, latent_parameter_set, safety_threshold, beta, threshold=0.05)
+            opt2 = safeopt.SafeOpt(gp2, latent_parameter_set, safety_threshold, beta, threshold=0.05)
+            opt3 = safeopt.SafeOpt(gp3, latent_parameter_set, safety_threshold, beta, threshold=0.05)
+            
+            opt1.plot(100)
+            opt2.plot(100)
+            opt3.plot(100)
+            plt.show()
+            
+            
                 
             
         else:
