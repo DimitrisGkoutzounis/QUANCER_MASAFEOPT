@@ -160,7 +160,7 @@ kp2_0 = 8
 kd2_0 = 0.5
 
 kp3_0 = 6  
-kd3_0 = 0.8
+kd3_0 = 0.7
 
 x0 = [(kp1_0, kd1_0), (kp2_0, kd2_0), (kp3_0, kd3_0)]
 
@@ -224,7 +224,7 @@ class Agent:
         self.bounds = bounds
         self.safe_point = safe_point
 
-        self.x0 = np.asarray([safe_point])
+        self.x0 = np.asarray([safe_point]).reshape(-1,6)
         self.y0 = np.asarray([[initial_reward]]) 
 
         self.kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
@@ -248,7 +248,7 @@ class Agent:
         self.rewards.append(y_meas)
 
 # Kp bounds
-K_bounds = [(0.01, 10), (0.01, 1), (0.01, 10), (0.01, 1), (0.01, 10), (0.01, 1)]
+K_bounds = [(0.01, 10), (0.01, 0.7), (0.01, 10), (0.01, 0.7), (0.01, 10), (0.01, 0.7)]
 
 agent1 = Agent(1, K_bounds, x0, reward_0)
 
@@ -281,25 +281,27 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
 
     return reward, os1, os2, os3
 
-N = 5  # Number of iterations
+N = 50  # Number of iterations
 
 # Initialize data files
 agent_data_dir = 'agent_data_3A'  
 if not os.path.exists(agent_data_dir):
     os.makedirs(agent_data_dir)
 
+
+print(agent1.x0)
 with open(f'{agent_data_dir}/agent1_data.txt', 'w', newline='') as f1, \
      open(f'{agent_data_dir}/agent2_data.txt', 'w', newline='') as f2, \
      open(f'{agent_data_dir}/agent3_data.txt', 'w', newline='') as f3: 
     writer1 = csv.writer(f1)
     writer2 = csv.writer(f2)
     writer3 = csv.writer(f3)  
-    writer1.writerow(['Iteration', 'Kp', 'Kd', 'Reward'])
-    writer2.writerow(['Iteration', 'Kp', 'Kd', 'Reward'])
-    writer3.writerow(['Iteration', 'Kp', 'Kd', 'Reward'])  
-    writer1.writerow([0, x0[0], x0[1], reward_0])
-    writer2.writerow([0, x0[2], x0[3], reward_0])
-    writer3.writerow([0, x0[4], x0[5], reward_0]) 
+    writer1.writerow(['Iteration', 'Kp', 'Kd','Reward'])
+    writer2.writerow(['Iteration', 'Kp', 'Kd','Reward'])
+    writer3.writerow(['Iteration', 'Kp', 'Kd','Reward'])  
+    writer1.writerow([0, x0, x0, reward_0])
+    writer2.writerow([0, x0, x0, reward_0])
+    writer3.writerow([0, x0, x0, reward_0]) 
 
 with open(f'{agent_data_dir}/rewards.txt', 'w') as f:
     f.write('Iteration,Reward\n')
@@ -313,7 +315,6 @@ for iteration in range(1, N+1):
     
     print(K1_next)
     
-    wait = input("Press Enter to run the experiment...")
     
 
     print(f"Iteration {iteration}, Agent 1:  -Kp {K1_next[0]} -Kd {K1_next[1]}, Agent 2: -Kp {K1_next[2]} -Kd {K1_next[3]}, Agent 3: -Kp {K1_next[4]} -Kd {K1_next[5]}")
@@ -344,10 +345,9 @@ for iteration in range(1, N+1):
     # Plot and save agents' opt plots in one figure with three subplots
     x_max_1, y_max_1 = agent1.opt.get_maximum() 
 
+    # fig, axes = plt.subpllots(3, 1, figsize=(8, 12))
 
-    plt.tight_layout()
-    plt.savefig(f'plots_3A/agents_iteration_{iteration}.png')  
-    plt.close()
+    # agent1.opt.plot(100)
 
 print("========= BAYESIAN OPTIMIZATION COMPLETED =========")
 
