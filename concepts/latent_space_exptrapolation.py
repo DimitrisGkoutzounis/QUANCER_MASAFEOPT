@@ -15,7 +15,9 @@ import safeopt
 import GPy
 from scipy.optimize import minimize
 from datetime import datetime
-from plot_iteration_3A import plot_iteration
+
+
+
 
 modelName = 'servoPDF'
 
@@ -25,6 +27,12 @@ target_uri_2 = 'tcpip://172.22.11.10:17000?keep_alive=1'
 target_uri_3 = 'tcpip://172.22.11.18:17000?keep_alive=1'  
 
 std_args = ' -d ./tmp -uri tcpip://linux-dev:17001'
+
+
+w1 = 1
+w2 = 1
+w3 = 1
+w4 = 0
 
 
 ################ PHASE 1 ################
@@ -230,7 +238,7 @@ def column_wise(Z_flat, X, D, N):
         diff1 = np.linalg.norm(X_d - mu_d)**2
         diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
-        action_term += 1 * diff1 + 1 * diff2
+        action_term += w2 * diff1 + w1 * diff2
 
         # Gradient-based alignment term
         grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
@@ -242,10 +250,23 @@ def column_wise(Z_flat, X, D, N):
         U_z[:, d] = grad_R_Z[:, d] / grad_R_Z_norm_column[d]
         U_x[:, d] = grad_R_X[:, d] / grad_R_X_norm_column[d]
 
+    # --- diagonal element ---
     dot_product_matrix = np.dot(U_z.T, U_x)
+    # wait = input("Press Enter to continue...")
+    print(dot_product_matrix)
     diag_penalty = np.linalg.norm((1 - np.diag(dot_product_matrix))**2)/D
+    print(diag_penalty)
     
-    total_loss = action_term + 1 * diag_penalty
+    # --- off-diagonal elements ---
+    sum_upper = np.sum(np.triu(dot_product_matrix, 1)**2) # Upper triangular
+    print(sum_upper)
+    # wait = input("Press Enter to continue...")  
+    sum_lower = np.sum(np.tril(dot_product_matrix, 1)**2) # Lower triangular
+    print(sum_lower)
+    # wait = input("Press Enter to continue...")
+    off_diag_penalty = (sum_upper + sum_lower) / (2*D)    
+    
+    total_loss = action_term + w3 * diag_penalty + w4 * off_diag_penalty
     print(total_loss) 
 
 
@@ -285,7 +306,8 @@ if __name__ == '__main__':
     discretization = 1000
     
     K = 4 # Number of experiments
-    N = 50  # Number of BO trials
+    N = 10  # Number of BO trials
+    N_test = 100  # Number of test points
     
     # Delay difference between the agents
     td1 = 0.09
@@ -361,11 +383,35 @@ if __name__ == '__main__':
 
         # X ---> R mapping 
         model_X = GPy.models.GPRegression(X, R, GPy.kern.RBF(input_dim=D))
+        
+        opt1.plot(100)
+        opt2.plot(100)
+        opt2.plot(100)
+        
+        print(len(opt1.x))
+    
+        plt.show()
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 
         # ----------- Minimize the loss function ------------
 
         wait = input("Press Enter to minimize...")
-        result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-3,'gtol':1e-3,'maxiter':100})
+        result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-2,'gtol':1e-2,'maxiter':1000})
         Z_opt = result.x.reshape(N, D)
                 
         # Z ---> X mapping
