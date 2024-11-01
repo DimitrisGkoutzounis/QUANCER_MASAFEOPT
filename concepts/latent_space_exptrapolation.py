@@ -310,7 +310,7 @@ if __name__ == '__main__':
     
     K_bounds_Z = [(-10,10)]
     beta = 1.0
-    safety_threshold = 0.03
+    safety_threshold = 0.029
     discretization = 1000
     
     K = 4 # Number of experiments
@@ -488,7 +488,6 @@ if __name__ == '__main__':
         m_Z3.plot()
         plt.show()
         
-        exit(0)
         # ------ Communication Complete ------
 
         Z1 = Z_opt[:,0]
@@ -502,19 +501,19 @@ if __name__ == '__main__':
         kernel3 = GPy.kern.Matern32(1)
 
         # Z1 ----> R mapping
-        gp1 = GPy.models.GPRegression(Z1.reshape(-1,1), R, kernel1, noise_var=0.05**2)
+        gp1 = GPy.models.GPRegression(Z1.reshape(-1,1), est_R[:,0].reshape(-1,1), kernel1, noise_var=0.01)
         # Z2 ----> R mapping
-        gp2 = GPy.models.GPRegression(Z2.reshape(-1,1), R, kernel2, noise_var=0.05**2)
+        gp2 = GPy.models.GPRegression(Z2.reshape(-1,1), est_R[:,1].reshape(-1,1), kernel2, noise_var=0.01)
         # Z3 ----> R mapping
-        gp3 = GPy.models.GPRegression(Z3.reshape(-1,1), R, kernel3, noise_var=0.05**2)
+        gp3 = GPy.models.GPRegression(Z3.reshape(-1,1),est_R[:,2].reshape(-1,1), kernel3, noise_var=0.01)
 
 
         latent_parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, discretization)
 
         # Agent safeopt objects
-        opt1 = safeopt.SafeOpt(gp1, latent_parameter_set, safety_threshold, beta, threshold=0.05)
-        opt2 = safeopt.SafeOpt(gp2, latent_parameter_set, safety_threshold, beta, threshold=0.05)
-        opt3 = safeopt.SafeOpt(gp3, latent_parameter_set, safety_threshold, beta, threshold=0.05)
+        opt1 = safeopt.SafeOpt(gp1, latent_parameter_set, safety_threshold, beta, threshold=0.00)
+        opt2 = safeopt.SafeOpt(gp2, latent_parameter_set, safety_threshold, beta, threshold=0.00)
+        opt3 = safeopt.SafeOpt(gp3, latent_parameter_set, safety_threshold, beta, threshold=0.00)
 
         print("Agents initialized...")
 

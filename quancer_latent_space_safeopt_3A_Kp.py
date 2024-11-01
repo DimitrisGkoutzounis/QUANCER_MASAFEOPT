@@ -350,7 +350,7 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
 
     return reward, os1, os2, os3
 
-N = 5  # Number of iterations
+N = 50  # Number of iterations
 
 # Initialize data files
 agent_data_dir = 'agent_data_3A'  
@@ -459,7 +459,6 @@ plt.show()
 
 
 
-exit(0)
 # # Collect data into X and Y
 N = len(agent1.kp_values)  # Number of data points (iterations + initial point)
 D = 3  # Total number of agents
