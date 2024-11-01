@@ -193,11 +193,12 @@ class Agent:
         print(self.x0)
         self.y0 = np.asarray([[initial_reward]]) 
 
-        self.kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        self.kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
         self.gp = GPy.models.GPRegression(self.x0, self.y0, self.kernel, noise_var=0.05**2)
+        print(self.gp.kern.parameters)
 
         self.parameter_set = safeopt.linearly_spaced_combinations(self.bounds, 1000)
-        self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.03, beta=1.0, threshold=0.05)
+        self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.03, beta=1, threshold=0.0)
 
         self.kp_values = [safe_point]
         self.rewards = [initial_reward]
@@ -240,13 +241,13 @@ subprocess.call(sys2dl, shell=True)
 subprocess.call(sys3dl, shell=True)  
 
 # Initial safepoint values.
-kp1_0 = 1
+kp1_0 = 9
 kd1_0 = 0.7
 
-kp2_0 = 10
+kp2_0 = 3
 kd2_0 = 0.7
 
-kp3_0 = 3 
+kp3_0 = 2 
 kd3_0 = 0.7
 
 x0_1 = [(kp1_0)]
@@ -310,6 +311,7 @@ wait = input("Press Enter to start Bayesian Optimization...")
 K_bounds = [(0.01, 10)]
 
 agent1 = Agent(1, K_bounds, x0_1, reward_0)
+
 agent2 = Agent(2, K_bounds, x0_2, reward_0)
 agent3 = Agent(3, K_bounds, x0_3, reward_0) 
 

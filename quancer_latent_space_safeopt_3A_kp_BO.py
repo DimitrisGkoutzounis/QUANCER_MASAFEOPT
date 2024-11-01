@@ -29,6 +29,7 @@ std_args = ' -d ./tmp -uri tcpip://linux-dev:17001'
 
 ################ PHASE 1 ################
 
+
 def sent_command(target_uri, modelName, gain_arg, std_args):
     """
     Send command to the target.
@@ -317,6 +318,8 @@ if __name__ == '__main__':
             print("X1",X1)
             print("X2",X2)
             print("X3",X3)
+
+            
                 
             
         else:
@@ -349,6 +352,8 @@ if __name__ == '__main__':
         Z_to_X_0 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X[:,0].reshape(-1,1), kernel=GPy.kern.RBF(1))
         Z_to_X_1 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), X[:,1].reshape(-1,1), kernel=GPy.kern.RBF(1))
         Z_to_X_2 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X[:,2].reshape(-1,1), kernel=GPy.kern.RBF(1))
+
+
 
         Z_to_X_0.plot()
         plt.title('Z1 --> X1')
