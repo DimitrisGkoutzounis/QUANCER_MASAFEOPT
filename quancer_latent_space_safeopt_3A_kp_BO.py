@@ -318,7 +318,13 @@ if __name__ == '__main__':
             print("X1",X1)
             print("X2",X2)
             print("X3",X3)
+<<<<<<< HEAD
 
+=======
+            
+            plt.figure()
+            
+>>>>>>> 8a2dfc84c8b832e489a601793360cbe09cec8639
             
                 
             
