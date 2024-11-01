@@ -28,11 +28,10 @@ target_uri_3 = 'tcpip://172.22.11.18:17000?keep_alive=1'
 
 std_args = ' -d ./tmp -uri tcpip://linux-dev:17001'
 
-
-w1 = 1
-w2 = 1
-w3 = 1
-w4 = 0
+w1 = 0
+w2 = 0
+w3 = 0
+w4 = 1
 
 
 ################ PHASE 1 ################
@@ -207,12 +206,12 @@ def compute_gradient(model, X):
     dmu_dX, _ = model.predictive_gradients(X)
     return dmu_dX
 
-def column_wise(Z_flat, X, D, N):
-    Z = Z_flat.reshape(N, D)
+def column_wise(Z_flat, X, est_R, D, N_sample):
+    Z = Z_flat.reshape(N_sample, D)
 
     # Define model_Z with R_z as observations
-    model_Z = GPy.models.GPRegression(Z, R.reshape(-1,1), GPy.kern.RBF(D))
-    model_all = GPy.models.GPRegression(Z, X,  GPy.kern.RBF(D))
+    
+    model_all = GPy.models.GPRegression(Z, X,  GPy.kern.Matern32(D))
     mu_all, _ = model_all.predict_noiseless(Z)
 
     loss = 0.0
@@ -223,15 +222,15 @@ def column_wise(Z_flat, X, D, N):
     grad_R_X_norm_column = []
 
     # Initialize matrices for U_z and U_x
-    U_z = np.zeros((N, D))
-    U_x = np.zeros((N, D))
+    U_z = np.zeros((N_sample, D))
+    U_x = np.zeros((N_sample, D))
     
 
     for d in range(D):
         X_d = np.zeros_like(X)
         X_d[:, d] = X[:, d]
         
-        model_d = GPy.models.GPRegression(Z, X_d,GPy.kern.RBF(D))
+        model_d = GPy.models.GPRegression(Z, X_d,GPy.kern.Matern32(D))
         mu_d, _ = model_d.predict_noiseless(Z)
         
 
@@ -239,16 +238,26 @@ def column_wise(Z_flat, X, D, N):
         diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
         action_term += w2 * diff1 + w1 * diff2
+        
+        # Z_d ---- est_Rd mapping
+        model_Zd = GPy.models.GPRegression(Z[:,d].reshape(-1,1), est_R[:,d].reshape(-1,1), GPy.kern.Matern32(1), noise_var=0.01)
+        model_Xd = GPy.models.GPRegression(X[:,d].reshape(-1,1), est_R[:,d].reshape(-1,1), GPy.kern.Matern32(1), noise_var=1)
 
         # Gradient-based alignment term
-        grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
-        grad_R_X = compute_gradient(model_X, X).reshape(N, D)
+        grad_R_Zd = compute_gradient(model_Zd, Z[:,d].reshape(-1,1))
+        grad_R_Xd = compute_gradient(model_Xd, X[:,d].reshape(-1,1))
+        
+        
+        grad_R_Zd = grad_R_Zd.flatten()
+        grad_R_Xd = grad_R_Xd.flatten()
+                
+        
+        grad_R_Z_norm_column.append(np.linalg.norm(grad_R_Zd))
+        grad_R_X_norm_column.append(np.linalg.norm(grad_R_Xd))
+        
 
-        grad_R_Z_norm_column.append(np.linalg.norm(grad_R_Z[:, d]))
-        grad_R_X_norm_column.append(np.linalg.norm(grad_R_X[:, d]))
-
-        U_z[:, d] = grad_R_Z[:, d] / grad_R_Z_norm_column[d]
-        U_x[:, d] = grad_R_X[:, d] / grad_R_X_norm_column[d]
+        U_z[:, d] = grad_R_Zd / np.linalg.norm(grad_R_Zd) 
+        U_x[:, d] = grad_R_Xd / np.linalg.norm(grad_R_Xd)
 
     # --- diagonal element ---
     dot_product_matrix = np.dot(U_z.T, U_x)
@@ -259,15 +268,14 @@ def column_wise(Z_flat, X, D, N):
     
     # --- off-diagonal elements ---
     sum_upper = np.sum(np.triu(dot_product_matrix, 1)**2) # Upper triangular
-    print(sum_upper)
+    # print(sum_upper)
     # wait = input("Press Enter to continue...")  
     sum_lower = np.sum(np.tril(dot_product_matrix, 1)**2) # Lower triangular
-    print(sum_lower)
+    # print(sum_lower)
     # wait = input("Press Enter to continue...")
     off_diag_penalty = (sum_upper + sum_lower) / (2*D)    
     
     total_loss = action_term + w3 * diag_penalty + w4 * off_diag_penalty
-    print(total_loss) 
 
 
     return total_loss
@@ -340,9 +348,9 @@ if __name__ == '__main__':
             print("X2",X2)
             print("X3",X3)
             
-            kernel1 = GPy.kern.RBF(1)
-            kernel2 = GPy.kern.RBF(1)
-            kernel3 = GPy.kern.RBF(1)
+            kernel1 = GPy.kern.Matern32(1)
+            kernel2 = GPy.kern.Matern32(1)
+            kernel3 = GPy.kern.Matern32(1)
 
             # Z1 ----> R mapping
             gp1 = GPy.models.GPRegression(X1.reshape(-1,1), R, kernel1, noise_var=0.05**2)
@@ -376,33 +384,59 @@ if __name__ == '__main__':
         print(R)
 
         # 
+        N_sample = 30
         N, D = X.shape  # N = No samples, D = No Agents
 
         # Initialize Z
-        Z = np.random.uniform(0, 1, (N, D))
+        Z = np.random.uniform(0, 1, (N_sample, D))
 
         # X ---> R mapping 
-        model_X = GPy.models.GPRegression(X, R, GPy.kern.RBF(input_dim=D))
         
-        opt1.plot(100)
-        opt2.plot(100)
-        opt2.plot(100)
+        # opt1.plot(100)
+        # opt2.plot(100)
+        # opt2.plot(100)
         
-        print(len(opt1.x))
     
-        plt.show()
+        # plt.show()
         
         
+      
+        x_test = np.linspace(0.01,10,N_sample).reshape(-1,1)
+        mu_sample_log1 = []
+        mu_sample_log2 = []
+        mu_sample_log3 = []
         
+        for i in range(N_sample):
+            
+            mu_sample1, _ = gp1.predict_noiseless(x_test[i].reshape(-1,1))
+            mu_sample2, _ = gp2.predict_noiseless(x_test[i].reshape(-1,1))
+            mu_sample3, _ = gp3.predict_noiseless(x_test[i].reshape(-1,1))
+            
+            mu_sample_log1.append(mu_sample1)
+            mu_sample_log2.append(mu_sample2)
+            mu_sample_log3.append(mu_sample3)
+            
         
+        # plt.figure(1)
+        # plt.scatter(x_test,mu_sample_log1)
+        # # plt.show()
+        # plt.figure(2)
+        # plt.scatter(x_test,mu_sample_log2)
+        # # plt.show()
+        # plt.figure(3)
+        # plt.scatter(x_test,mu_sample_log3)
+        # # plt.show()
         
+        X1 = np.array(x_test)
+        X2 = np.array(x_test)
+        X3 = np.array(x_test)
+        X = np.vstack((X1, X2, X3)).reshape(N_sample, D)
         
+        est_R1 = np.array(mu_sample_log1).flatten()
+        est_R2 = np.array(mu_sample_log2).flatten()
+        est_R3 = np.array(mu_sample_log3).flatten() 
         
-        
-        
-        
-        
-        
+        est_R = np.vstack((est_R1, est_R2, est_R3)).T   
         
         
         
@@ -411,13 +445,24 @@ if __name__ == '__main__':
         # ----------- Minimize the loss function ------------
 
         wait = input("Press Enter to minimize...")
-        result = minimize(column_wise, Z.flatten(), args=(X, D, N), method='L-BFGS-B',options={'ftol':1e-2,'gtol':1e-2,'maxiter':1000})
-        Z_opt = result.x.reshape(N, D)
+        
+        # X ----> R
+        model_X1 = GPy.models.GPRegression(X[:,0].reshape(-1,1), est_R[:,0].reshape(-1,1), GPy.kern.Matern32(1))
+        model_X2 = GPy.models.GPRegression(X[:,1].reshape(-1,1), est_R[:,1].reshape(-1,1), GPy.kern.Matern32(1))
+        model_X3 = GPy.models.GPRegression(X[:,2].reshape(-1,1), est_R[:,2].reshape(-1,1), GPy.kern.Matern32(1))
+        
+        # plt.figure()
+        # model_X1.plot() 
+        # plt.show()        
+        
+        
+        result = minimize(column_wise, Z.flatten(), args=(X, est_R, D, N_sample), method='L-BFGS-B',options={'ftol':1e-1,'gtol':1e-1,'maxiter':1000})
+        Z_opt = result.x.reshape(N_sample, D)
                 
         # Z ---> X mapping
-        Z_to_X_0 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X[:,0].reshape(-1,1), kernel=GPy.kern.RBF(1))
-        Z_to_X_1 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), X[:,1].reshape(-1,1), kernel=GPy.kern.RBF(1))
-        Z_to_X_2 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X[:,2].reshape(-1,1), kernel=GPy.kern.RBF(1))
+        Z_to_X_0 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X[:,0].reshape(-1,1), kernel=GPy.kern.Matern32(1), noise_var=0.01)
+        Z_to_X_1 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), X[:,1].reshape(-1,1), kernel=GPy.kern.Matern32(1), noise_var=0.01)
+        Z_to_X_2 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X[:,2].reshape(-1,1), kernel=GPy.kern.Matern32(1), noise_var=0.01)
 
         Z_to_X_0.plot()
         plt.title('Z1 --> X1')
@@ -434,7 +479,16 @@ if __name__ == '__main__':
         plt.savefig(os.path.join(plots_dir, f'Z_to_X_mapping_{j+1}.png'))
         plt.show()
         
+        m_Z1 = GPy.models.GPRegression(Z_opt[:,0].reshape(-1,1), est_R[:,0].reshape(-1,1), kernel=GPy.kern.Matern32(1), noise_var=0.01)
+        m_Z2 = GPy.models.GPRegression(Z_opt[:,1].reshape(-1,1), est_R[:,1].reshape(-1,1), kernel=GPy.kern.Matern32(1), noise_var=0.01)
+        m_Z3 = GPy.models.GPRegression(Z_opt[:,2].reshape(-1,1), est_R[:,2].reshape(-1,1), kernel=GPy.kern.Matern32(1), noise_var=0.01)
         
+        m_Z1.plot()
+        m_Z2.plot() 
+        m_Z3.plot()
+        plt.show()
+        
+        exit(0)
         # ------ Communication Complete ------
 
         Z1 = Z_opt[:,0]
@@ -443,9 +497,9 @@ if __name__ == '__main__':
         
         
         
-        kernel1 = GPy.kern.RBF(1)
-        kernel2 = GPy.kern.RBF(1)
-        kernel3 = GPy.kern.RBF(1)
+        kernel1 = GPy.kern.Matern32(1)
+        kernel2 = GPy.kern.Matern32(1)
+        kernel3 = GPy.kern.Matern32(1)
 
         # Z1 ----> R mapping
         gp1 = GPy.models.GPRegression(Z1.reshape(-1,1), R, kernel1, noise_var=0.05**2)
