@@ -198,7 +198,7 @@ class Agent:
         print(self.gp.kern.parameters)
 
         self.parameter_set = safeopt.linearly_spaced_combinations(self.bounds, 1000)
-        self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.03, beta=1, threshold=0.0)
+        self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.03, beta=1, threshold=0.05)
 
         self.kp_values = [safe_point]
         self.rewards = [initial_reward]
@@ -350,7 +350,7 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
 
     return reward, os1, os2, os3
 
-N = 50  # Number of iterations
+N = 5  # Number of iterations
 
 # Initialize data files
 agent_data_dir = 'agent_data_3A'  
@@ -450,8 +450,16 @@ print("========= BAYESIAN OPTIMIZATION COMPLETED =========")
 # # After Bayesian Optimization, compute objective function and minimize
 # # =================================================
 
-exit(0)
+agent1.opt.plot(100)
+agent2.opt.plot(100)
+agent3.opt.plot(100)
 
+plt.show()
+
+
+
+
+exit(0)
 # # Collect data into X and Y
 N = len(agent1.kp_values)  # Number of data points (iterations + initial point)
 D = 3  # Total number of agents
@@ -533,9 +541,12 @@ for iteration in range(0, 10):
     agent3.update(Z3_next, y)
 
 
+plt.figure()
 agent1.opt.plot(100)
 agent2.opt.plot(100)
 agent3.opt.plot(100)
+
+plt.show()
 
 
 
