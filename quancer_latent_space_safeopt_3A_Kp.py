@@ -193,11 +193,12 @@ class Agent:
         print(self.x0)
         self.y0 = np.asarray([[initial_reward]]) 
 
-        self.kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        self.kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
         self.gp = GPy.models.GPRegression(self.x0, self.y0, self.kernel, noise_var=0.05**2)
+        print(self.gp.kern.parameters)
 
         self.parameter_set = safeopt.linearly_spaced_combinations(self.bounds, 1000)
-        self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.03, beta=1.0, threshold=0.05)
+        self.opt = safeopt.SafeOpt(self.gp, self.parameter_set, 0.03, beta=1, threshold=0.05)
 
         self.kp_values = [safe_point]
         self.rewards = [initial_reward]
@@ -240,13 +241,13 @@ subprocess.call(sys2dl, shell=True)
 subprocess.call(sys3dl, shell=True)  
 
 # Initial safepoint values.
-kp1_0 = 1
+kp1_0 = 9
 kd1_0 = 0.7
 
-kp2_0 = 10
+kp2_0 = 3
 kd2_0 = 0.7
 
-kp3_0 = 3 
+kp3_0 = 2 
 kd3_0 = 0.7
 
 x0_1 = [(kp1_0)]
@@ -310,6 +311,7 @@ wait = input("Press Enter to start Bayesian Optimization...")
 K_bounds = [(0.01, 10)]
 
 agent1 = Agent(1, K_bounds, x0_1, reward_0)
+
 agent2 = Agent(2, K_bounds, x0_2, reward_0)
 agent3 = Agent(3, K_bounds, x0_3, reward_0) 
 
@@ -348,7 +350,7 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
 
     return reward, os1, os2, os3
 
-N = 50  # Number of iterations
+N = 5  # Number of iterations
 
 # Initialize data files
 agent_data_dir = 'agent_data_3A'  
@@ -448,8 +450,16 @@ print("========= BAYESIAN OPTIMIZATION COMPLETED =========")
 # # After Bayesian Optimization, compute objective function and minimize
 # # =================================================
 
-exit(0)
+agent1.opt.plot(100)
+agent2.opt.plot(100)
+agent3.opt.plot(100)
 
+plt.show()
+
+
+
+
+exit(0)
 # # Collect data into X and Y
 N = len(agent1.kp_values)  # Number of data points (iterations + initial point)
 D = 3  # Total number of agents
@@ -531,9 +541,12 @@ for iteration in range(0, 10):
     agent3.update(Z3_next, y)
 
 
+plt.figure()
 agent1.opt.plot(100)
 agent2.opt.plot(100)
 agent3.opt.plot(100)
+
+plt.show()
 
 
 
