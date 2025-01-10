@@ -517,7 +517,9 @@ with open(f'{agent_data_dir}_Z/agent1_data.txt', 'w', newline='') as f1, \
 with open(f'{agent_data_dir}_Z/rewards.txt', 'w') as f:
     f.write('Iteration,Reward\n')
 
-for iteration in range(0, 20):
+
+N2 = 30
+for iteration in range(0, N2):
     # Get next Z values from agents
     Z1_next = agent1.optimize()
     Z2_next = agent2.optimize()
