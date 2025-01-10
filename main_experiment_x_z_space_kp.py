@@ -27,6 +27,7 @@ def sent_command(target_uri, modelName, gain_arg, std_args):
 
 def retrieve_data(target_uri, modelName, gain_arg, std_args, agent, iteration, is_z_space=False):
     sys_get = f'quarc_run -u -t {target_uri} {modelName}.rt-linux_rt_armv7{gain_arg}{std_args}'
+    print(sys_get)
     subprocess.call(sys_get, shell=True)
     data_dir = 'data_3A_Z' if is_z_space else 'data_3A'
     if not os.path.exists(data_dir):
@@ -155,7 +156,7 @@ def column_wise(Z_flat, X, D, N):
         diff1 = np.linalg.norm(X_d - mu_d)**2
         diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
-        action_term += 1 * diff1 + 0 * diff2
+        action_term += 1 * diff1 + 1 * diff2
 
         # Gradient-based alignment term
         grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
@@ -241,10 +242,10 @@ subprocess.call(sys2dl, shell=True)
 subprocess.call(sys3dl, shell=True)  
 
 # Initial safepoint values.
-kp1_0 = 9
+kp1_0 = 1
 kd1_0 = 0.7
 
-kp2_0 = 3
+kp2_0 = 3.5
 kd2_0 = 0.7
 
 kp3_0 = 2
@@ -345,7 +346,7 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration, is_z_space=False):
     reward, os1, os2, os3 = compute_reward(theta_d, rt_theta1, rt_theta2, rt_theta3, rt_t1, rt_t2, rt_t3)
     return reward, os1, os2, os3
 
-N = 50  # Number of iterations
+N = 20  # Number of iterations
 
 # Initialize data files
 agent_data_dir = 'agent_data_3A'  
@@ -445,11 +446,11 @@ print("========= BAYESIAN OPTIMIZATION COMPLETED =========")
 # # After Bayesian Optimization, compute objective function and minimize
 # # =================================================
 
-agent1.opt.plot(100)
-agent2.opt.plot(100)
-agent3.opt.plot(100)
+# agent1.opt.plot(100)
+# agent2.opt.plot(100)
+# agent3.opt.plot(100)
 
-plt.show()
+# plt.show()
 
 
 
@@ -516,7 +517,7 @@ with open(f'{agent_data_dir}_Z/agent1_data.txt', 'w', newline='') as f1, \
 with open(f'{agent_data_dir}_Z/rewards.txt', 'w') as f:
     f.write('Iteration,Reward\n')
 
-for iteration in range(0, 10):
+for iteration in range(0, 20):
     # Get next Z values from agents
     Z1_next = agent1.optimize()
     Z2_next = agent2.optimize()
