@@ -310,7 +310,7 @@ if __name__ == '__main__':
     
     K_bounds_Z = [(-10,10)]
     beta = 1.0
-    safety_threshold = 0.029
+    safety_threshold = 0.0
     discretization = 1000
     
     K = 4 # Number of experiments
@@ -501,19 +501,19 @@ if __name__ == '__main__':
         kernel3 = GPy.kern.Matern32(1)
 
         # Z1 ----> R mapping
-        gp1 = GPy.models.GPRegression(Z1.reshape(-1,1), est_R[:,0].reshape(-1,1), kernel1, noise_var=0.01)
+        gp1 = GPy.models.GPRegression(Z1.reshape(-1,1), est_R[:,0].reshape(-1,1), kernel1, noise_var=0.05**2)
         # Z2 ----> R mapping
-        gp2 = GPy.models.GPRegression(Z2.reshape(-1,1), est_R[:,1].reshape(-1,1), kernel2, noise_var=0.01)
+        gp2 = GPy.models.GPRegression(Z2.reshape(-1,1), est_R[:,1].reshape(-1,1), kernel2, noise_var=0.05**2)
         # Z3 ----> R mapping
-        gp3 = GPy.models.GPRegression(Z3.reshape(-1,1),est_R[:,2].reshape(-1,1), kernel3, noise_var=0.01)
+        gp3 = GPy.models.GPRegression(Z3.reshape(-1,1), est_R[:,2].reshape(-1,1), kernel3, noise_var=0.05**2)
 
 
         latent_parameter_set = safeopt.linearly_spaced_combinations(K_bounds_Z, discretization)
 
         # Agent safeopt objects
-        opt1 = safeopt.SafeOpt(gp1, latent_parameter_set, safety_threshold, beta, threshold=0.00)
-        opt2 = safeopt.SafeOpt(gp2, latent_parameter_set, safety_threshold, beta, threshold=0.00)
-        opt3 = safeopt.SafeOpt(gp3, latent_parameter_set, safety_threshold, beta, threshold=0.00)
+        opt1 = safeopt.SafeOpt(gp1, latent_parameter_set, safety_threshold, beta, threshold=0.05)
+        opt2 = safeopt.SafeOpt(gp2, latent_parameter_set, safety_threshold, beta, threshold=0.05)
+        opt3 = safeopt.SafeOpt(gp3, latent_parameter_set, safety_threshold, beta, threshold=0.05)
 
         print("Agents initialized...")
 
@@ -573,39 +573,7 @@ if __name__ == '__main__':
             opt1.add_new_data_point(Z2_next,y)
             opt1.add_new_data_point(Z3_next,y)
             
-            x_max_1, y_max_1 = opt1.get_maximum()
-            x_max_2, y_max_2 = opt2.get_maximum()
-            x_max_3, y_max_3 = opt3.get_maximum()  
             
-            fig, axes = plt.subplots(1, 3, figsize=(18, 6))  
-
-            # Agent 1 plot
-            opt1.plot(100, axes[0])
-            axes[0].scatter(x_max_1[0],y_max_1, marker="*", color='red', s=100, label='Current Maximum')
-            axes[0].set_title(f'Agent 1 - Iteration {iteration}')
-            axes[0].set_xlabel('Kp')
-            axes[0].set_ylabel('Reward')
-            axes[0].legend()
-
-            # Agent 2 plot
-            opt2.plot(100, axes[1])
-            axes[1].scatter(x_max_2[0],y_max_2, marker="*", color='red', s=100, label='Current Maximum')
-            axes[1].set_title(f'Agent 2 - Iteration {iteration}')
-            axes[1].set_xlabel('Kp')
-            axes[1].set_ylabel('Reward')
-            axes[1].legend()
-
-            # Agent 3 plot
-            opt3.plot(100, axes[2])
-            axes[2].scatter(x_max_3[0],y_max_3, marker="*", color='red', s=100, label='Current Maximum')
-            axes[2].set_title(f'Agent 3 - Iteration {iteration}')
-            axes[2].set_xlabel('Kp')
-            axes[2].set_ylabel('Reward')
-            axes[2].legend()
-
-            plt.tight_layout()
-            plt.savefig(os.path.join(plots_dir, 'safeopt_{iteration}.png'))  
-            plt.close()
             
         
         write_z_data(z_data_dir,actions_1_log,actions_2_log,actions_3_log,reward_z_log, j+1)
