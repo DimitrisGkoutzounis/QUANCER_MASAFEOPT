@@ -350,7 +350,7 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration):
 
     return reward, os1, os2, os3
 
-N = 10  # Number of iterations
+N = 30  # Number of iterations
 
 # Initialize data files
 agent_data_dir = 'agent_data_3A'  

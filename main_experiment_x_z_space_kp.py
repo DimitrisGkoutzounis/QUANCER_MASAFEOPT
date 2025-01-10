@@ -346,7 +346,7 @@ def run_experiment(kp1, kd1, kp2, kd2, kp3, kd3, iteration, is_z_space=False):
     reward, os1, os2, os3 = compute_reward(theta_d, rt_theta1, rt_theta2, rt_theta3, rt_t1, rt_t2, rt_t3)
     return reward, os1, os2, os3
 
-N = 20  # Number of iterations
+N = 30  # Number of iterations
 
 # Initialize data files
 agent_data_dir = 'agent_data_3A'  
