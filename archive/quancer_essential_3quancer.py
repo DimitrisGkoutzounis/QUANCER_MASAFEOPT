@@ -28,9 +28,9 @@ subprocess.call(sys2dl, shell=True)
 subprocess.call(sys3dl, shell=True)
 
 # Define control parameters for each system
-kp1, kd1 = 4, 0.05
-kp2, kd2 = 4, 0.05
-kp3, kd3 = 4, 0.05
+kp1, kd1 = 1.4508, 0.7
+kp2, kd2 = 1.4819, 0.7
+kp3, kd3 = 1.3943, 0.7
 
 td1, td3 = 0.045, 0.045
 

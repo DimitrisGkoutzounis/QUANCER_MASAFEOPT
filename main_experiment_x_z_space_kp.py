@@ -441,6 +441,9 @@ for iteration in range(1, N+1):
     plt.close()
 
 print("========= BAYESIAN OPTIMIZATION COMPLETED =========")
+print("Agent 1 belief:", agent1.opt.get_maximum())
+print("Agent 2 belief:", agent2.opt.get_maximum())
+print("Agent 3 belief:", agent3.opt.get_maximum())
 
 # # =================================================
 # # After Bayesian Optimization, compute objective function and minimize
@@ -453,7 +456,7 @@ print("========= BAYESIAN OPTIMIZATION COMPLETED =========")
 # plt.show()
 
 
-
+exit(0)
 
 # # Collect data into X and Y
 N = len(agent1.kp_values)  # Number of data points (iterations + initial point)
@@ -518,7 +521,7 @@ with open(f'{agent_data_dir}_Z/rewards.txt', 'w') as f:
     f.write('Iteration,Reward\n')
 
 
-N2 = 30
+N2 = 50
 for iteration in range(0, N2):
     # Get next Z values from agents
     Z1_next = agent1.optimize()
@@ -567,6 +570,9 @@ for iteration in range(0, N2):
         f.write(f"{iteration},{y}\n")
 
 
+print("Agent 1 belief:", agent1.opt.get_maximum())
+print("Agent 2 belief:", agent2.opt.get_maximum())
+print("Agent 3 belief:", agent3.opt.get_maximum())
 
 plt.figure()
 agent1.opt.plot(100)

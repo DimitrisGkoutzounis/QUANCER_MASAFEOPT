@@ -48,6 +48,7 @@ def retrieve_data(target_uri, modelName, gain_arg, std_args, agent, iteration):
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
     shutil.copyfile('servoPDF.mat', f'{data_dir}/servoPDF-{agent}_{iteration}.mat')
+
     
 def load_agent_data(filename):
     """
@@ -231,7 +232,7 @@ def column_wise(Z_flat, X, D, N):
         diff1 = np.linalg.norm(X_d - mu_d)**2
         diff2 = np.linalg.norm(mu_d - mu_all[:, [d]])**2
         
-        action_term += 1 * diff1 + 1 * diff2
+        action_term += 1 * diff1 + 0 * diff2
 
         # Gradient-based alignment term
         grad_R_Z = compute_gradient(model_Z, Z).reshape(N, D)
@@ -254,10 +255,13 @@ def column_wise(Z_flat, X, D, N):
 
 
 z_data_dir = 'Z_data'
-baseline_dir = 'agent_data_3A_baseline'
+baseline_dir = 'agent_data_3A'
 
 if not os.path.exists(z_data_dir):
     os.makedirs(z_data_dir)
+
+
+
 
 if __name__ == '__main__':
     
@@ -281,12 +285,12 @@ if __name__ == '__main__':
     # ----- Configuration -----
     
     K_bounds_Z = [(-10,10)]
-    beta = 1.0
+    beta = 3.5
     safety_threshold = 0.03
     discretization = 1000
     
-    K = 4 # Number of experiments
-    N = 50  # Number of BO trials
+    K = 1 # Number of experiments
+    N = 30  # Number of BO trials
     
     # Delay difference between the agents
     td1 = 0.09
@@ -318,9 +322,6 @@ if __name__ == '__main__':
             print("X1",X1)
             print("X2",X2)
             print("X3",X3)
-<<<<<<< HEAD
-
-=======
             
             kernel1 = GPy.kern.RBF(1)
             kernel2 = GPy.kern.RBF(1)
@@ -343,7 +344,6 @@ if __name__ == '__main__':
                 
             
             
->>>>>>> 8a2dfc84c8b832e489a601793360cbe09cec8639
             
                 
             
@@ -374,25 +374,27 @@ if __name__ == '__main__':
         Z_opt = result.x.reshape(N, D)
                 
         # Z ---> X mapping
-        Z_to_X_0 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X[:,0].reshape(-1,1), kernel=GPy.kern.RBF(1))
-        Z_to_X_1 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), X[:,1].reshape(-1,1), kernel=GPy.kern.RBF(1))
-        Z_to_X_2 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X[:,2].reshape(-1,1), kernel=GPy.kern.RBF(1))
+        Z_to_X_0 = GPy.models.GPRegression(Z_opt[:, 0].reshape(-1,1), X[:,0].reshape(-1,1), kernel=GPy.kern.Matern32(1))
+        Z_to_X_1 = GPy.models.GPRegression(Z_opt[:, 1].reshape(-1,1), X[:,1].reshape(-1,1), kernel=GPy.kern.Matern32(1))
+        Z_to_X_2 = GPy.models.GPRegression(Z_opt[:, 2].reshape(-1,1), X[:,2].reshape(-1,1), kernel=GPy.kern.Matern32(1))
 
 
 
         Z_to_X_0.plot()
-        plt.title('Z1 --> X1')
-        plt.xlabel('Z1')
-        plt.ylabel('X1')
+        plt.title(r'$Z_1 \rightarrow X_1$')
+        plt.xlabel(r'$Z_1$')
+        plt.ylabel(r'$X_1$')
+        plt.savefig(os.path.join(plots_dir, r'Z1_to_X1_mapping_{j+1}.png'))
         Z_to_X_1.plot()
-        plt.title('Z2 --> X2')
-        plt.xlabel('Z2')
-        plt.ylabel('X2')
+        plt.title(r'$Z_2 \rightarrow X_2$')
+        plt.xlabel(r'$Z_2$')
+        plt.ylabel(r'$X_2$')
+        plt.savefig(os.path.join(plots_dir, r'Z2_to_X2_mapping_{j+1}.png'))
         Z_to_X_2.plot()
-        plt.title('Z3 --> X3')
-        plt.xlabel('Z3')
-        plt.ylabel('X3')
-        plt.savefig(os.path.join(plots_dir, f'Z_to_X_mapping_{j+1}.png'))
+        plt.title(r'$Z_3 \rightarrow X_3$')
+        plt.xlabel(r'$Z_3$')
+        plt.ylabel(r'$X_3$')
+        plt.savefig(os.path.join(plots_dir, r'Z3_to_X3_mapping_{j+1}.png'))
         plt.show()
         
         
@@ -404,9 +406,9 @@ if __name__ == '__main__':
         
         
         
-        kernel1 = GPy.kern.RBF(1)
-        kernel2 = GPy.kern.RBF(1)
-        kernel3 = GPy.kern.RBF(1)
+        kernel1 = GPy.kern.Matern32(1)
+        kernel2 = GPy.kern.Matern32(1)
+        kernel3 = GPy.kern.Matern32(1)
 
         # Z1 ----> R mapping
         gp1 = GPy.models.GPRegression(Z1.reshape(-1,1), R, kernel1, noise_var=0.05**2)
@@ -438,8 +440,8 @@ if __name__ == '__main__':
             
             # Get next Z values from agents
             Z1_next = opt1.optimize()
-            Z2_next = opt1.optimize()
-            Z3_next = opt1.optimize()
+            Z2_next = opt2.optimize()
+            Z3_next = opt3.optimize()
             
             
             # Z --> X mapping
@@ -478,8 +480,8 @@ if __name__ == '__main__':
 
             # Update agents with observations
             opt1.add_new_data_point(Z1_next,y)
-            opt1.add_new_data_point(Z2_next,y)
-            opt1.add_new_data_point(Z3_next,y)
+            opt2.add_new_data_point(Z2_next,y)
+            opt3.add_new_data_point(Z3_next,y)
             
             x_max_1, y_max_1 = opt1.get_maximum()
             x_max_2, y_max_2 = opt2.get_maximum()
@@ -491,8 +493,8 @@ if __name__ == '__main__':
             opt1.plot(100, axes[0])
             axes[0].scatter(x_max_1[0],y_max_1, marker="*", color='red', s=100, label='Current Maximum')
             axes[0].set_title(f'Agent 1 - Iteration {iteration}')
-            axes[0].set_xlabel('Kp')
-            axes[0].set_ylabel('Reward')
+            axes[0].set_xlabel('$Kp$')
+            axes[0].set_ylabel('$Reward$')
             axes[0].legend()
 
             # Agent 2 plot
@@ -507,12 +509,12 @@ if __name__ == '__main__':
             opt3.plot(100, axes[2])
             axes[2].scatter(x_max_3[0],y_max_3, marker="*", color='red', s=100, label='Current Maximum')
             axes[2].set_title(f'Agent 3 - Iteration {iteration}')
-            axes[2].set_xlabel('Kp')
-            axes[2].set_ylabel('Reward')
+            axes[2].set_xlabel('$Kp$')
+            axes[2].set_ylabel('$Reward$')
             axes[2].legend()
 
             plt.tight_layout()
-            plt.savefig(os.path.join(plots_dir, 'safeopt_{iteration}.png'))  
+            plt.savefig(os.path.join(plots_dir, f'safeopt_{iteration}.png'))  
             plt.close()
             
         

@@ -233,7 +233,7 @@ td1 = 0.09
 td2 = 0.045  
 td3 = 0.001 
 
-agent_data_dir = 'agent_data_3A_baseline'
+agent_data_dir = 'agent_data_3A'
 
 agent1_x1 = []
 agent2_x2 = []
@@ -260,9 +260,9 @@ with open(f'{agent_data_dir}/agent3_data.txt', 'r') as f3:
         agent3_x3.append(float(row[1]))
         
 
-Kd1 = 0.3
-Kd2 = 0.5
-Kd3 = 0.6
+Kd1 = 0.7
+Kd2 = 0.7
+Kd3 = 0.7
         
 #make the list array
 X1 = np.array(agent1_x1)
@@ -379,8 +379,8 @@ for iteration in range(0, N):
     print(iteration)
     # Get next Z values from agents
     Z1_next = opt1.optimize()
-    Z2_next = opt1.optimize()
-    Z3_next = opt1.optimize()
+    Z2_next = opt2.optimize()
+    Z3_next = opt3.optimize()
     
     
     # Z --> X mapping
@@ -408,19 +408,21 @@ for iteration in range(0, N):
 
     # Update agents with observations
     opt1.add_new_data_point(Z1_next,y)
-    opt1.add_new_data_point(Z2_next,y)
-    opt1.add_new_data_point(Z3_next,y)
+    opt2.add_new_data_point(Z2_next,y)
+    opt3.add_new_data_point(Z3_next,y)
 
 
 opt1.plot(100)
-opt1.plot(100)
-opt1.plot(100)
+opt2.plot(100)
+opt3.plot(100)
 
 plt.figure()
 plt.plot(reward_z, label='Reward_Z')
 plt.plot(rewards, label='Reward_X')
 plt.legend()
 plt.show()
+
+
 
 
 x,y = opt1.get_maximum()
@@ -489,8 +491,8 @@ for iteration in range(0, N):
     print(iteration)
     # Get next Z values from agents
     Z1_next = opt1.optimize()
-    Z2_next = opt1.optimize()
-    Z3_next = opt1.optimize()
+    Z2_next = opt2.optimize()
+    Z3_next = opt3.optimize()
     
     
     # Z --> X mapping
