@@ -525,8 +525,8 @@ for iteration in range(0, N):
 
 
 opt1.plot(100)
-opt1.plot(100)
-opt1.plot(100)
+opt2.plot(100)
+opt3.plot(100)
 
 plt.figure()
 plt.plot(reward_z, label='Reward_Z')
