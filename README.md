@@ -17,6 +17,7 @@ Clone the repository and install the required dependencies:
 ```bash
 git clone https://github.com/DimitrisGkoutzounis/QUANCER_MASAFEOPT.git
 cd QUANCER_MASAFEOPT
+pip install matplotlib scipy numpy safeopt GPy
 ```
 
 ## Usage
