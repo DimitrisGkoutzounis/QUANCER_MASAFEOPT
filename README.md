@@ -2,13 +2,13 @@
 
 ## Overview
 
-This repository contains the implementation of my Master's thesis, which extends the Safe Bayesian Optimization (SafeOpt) algorithm to a multi-agent setting, utilizing the Quasar platform for experimental validation. The work focuses on safe and efficient optimization in a cooperative control scenario.
+This repository contains the implementation of my Master's thesis "Learning-based control of multi-agent systems", which extends the SafeOpt algorithm to a multi-agent setting, utilizing the Quasar platform for experimental validation. The work focuses on safe and efficient optimization in a decentralized cooperative control scenario.
 
 ## Key Contributions
 
-- **Extension of SafeOpt**: Expands the Safe Bayesian Optimization framework to a multi-agent environment.
+- **Extension of SafeOpt**: Expands the SafeOpt algorithm to a multi-agent environment.
 - **Multi-Agent Safe Learning**: Implements decentralized safe learning for multiple agents interacting in a shared control task.
-- **Quanser Platform Integration**: Deploys and evaluates the approach on the Quasar platform for real-world experimental validation.
+- **Quanser Platform Integration**: Deploys and evaluates the approach on the Quanser platform for real-world experimental validation.
 
 ## Installation
 
