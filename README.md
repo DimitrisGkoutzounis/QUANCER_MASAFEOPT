@@ -15,8 +15,8 @@ This repository contains the implementation of my Master's thesis, which extends
 Clone the repository and install the required dependencies:
 
 ```bash
-git clone https://github.com/yourusername/your-repo.git
-cd your-repo
+git clone https://github.com/DimitrisGkoutzounis/QUANCER_MASAFEOPT.git
+cd QUANCER_MASAFEOPT
 pip install -r requirements.txt
 ```
 
